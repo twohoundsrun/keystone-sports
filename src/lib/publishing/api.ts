@@ -57,3 +57,14 @@ export const saveEditorPost = createServerFn({ method: 'POST' }).validator(input
     .bind(id, userId, data.date, data.kind, data.title, data.body, data.eventTime, team, Number(data.published), new Date().toISOString()).run();
   return { id };
 });
+
+export const runOwnerRecap = createServerFn({ method: 'POST' })
+  .validator((input: { date?: string } | undefined) => ({
+    date: typeof input?.date === 'string' && input.date ? input.date : undefined,
+  }))
+  .handler(async ({ data }) => {
+    const { requireAdmin } = await import('./runtime.server');
+    requireAdmin();
+    const { autoRecapDraft } = await import('../sports/auto-recap');
+    return autoRecapDraft(data.date);
+  });

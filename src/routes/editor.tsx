@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { getSiteAccess, getEditorPosts, saveEditorPost } from '@/lib/publishing/api';
+import { getSiteAccess, getEditorPosts, saveEditorPost, runOwnerRecap } from '@/lib/publishing/api';
 import type { Post } from '@/lib/publishing/types';
 import { dateKeyNY } from '@/lib/sports/time';
 import { TEAMS } from '@/data/teams';
@@ -71,6 +71,24 @@ function Editor() {
     }
   }
 
+  async function generateRecap() {
+    setBusy(true);
+    setMessage('');
+    try {
+      const result = await runOwnerRecap({ data: { date: draft.date } });
+      setPosts(await getEditorPosts());
+      if (result.ok) {
+        setMessage(`Recap draft saved for ${result.date}. Open it from Saved posts.`);
+      } else {
+        setMessage(result.error);
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Recap failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 lg:grid-cols-[2fr_1fr]">
       <section>
@@ -116,9 +134,11 @@ function Editor() {
           <div className="flex flex-wrap gap-3">
             <Button disabled={busy} type="submit">Save draft / unpublish</Button>
             <Button disabled={busy || !draft.title.trim() || !draft.body.trim()} type="button" onClick={() => void save(true)}>Publish</Button>
+            <Button disabled={busy} type="button" variant="outline" onClick={() => void generateRecap()}>Generate recap</Button>
             <Button variant="outline" type="button" onClick={() => { if (!draft.body || window.confirm('Start a new draft? Unsaved edits will be discarded.')) setDraft(empty()); }}>New post</Button>
           </div>
-          <p className="text-sm text-muted">A recap tagged to a team appears in that team’s recap archive once published.</p>
+          <p className="text-sm text-muted">Generate recap writes a private draft for the date above. It spends a little OpenAI credit. A recap tagged to a team appears in that team’s recap archive once published.</p>
+          {!access.aiEnabled ? <p className="text-sm text-danger">AI key is not visible to the Worker yet. Recap generate will fail until AI_API_KEY is readable.</p> : null}
           <p role="status">{message}</p>
         </form>
       </section>
