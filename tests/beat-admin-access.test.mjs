@@ -58,15 +58,30 @@ test('Reject hides a Beat item and clears prior approval metadata', async () => 
   assert.equal(item.approvedAt, null);
 });
 
-test('Beat admin mutations use a dedicated Access path without moving public serverFns', () => {
-  const middleware = readFileSync('src/lib/api-middleware.ts', 'utf8');
+test('Beat Desk browser actions use the exact Access-protected /editor/beat route', () => {
+  const middleware = readFileSync('src/lib/beat-admin-middleware.ts', 'utf8');
   const editor = readFileSync('src/routes/editor_.beat.tsx', 'utf8');
+  const start = readFileSync('src/start.ts', 'utf8');
   const vite = readFileSync('vite.config.ts', 'utf8');
   const standalone = readFileSync('vite.standalone.config.ts', 'utf8');
-  assert.match(middleware, /\/editor\/api\/beat\/mutate/);
-  assert.match(middleware, /\/editor\/api\/beat\/desk/);
-  assert.match(editor, /fetch\("\/editor\/api\/beat\/mutate"/);
-  assert.match(editor, /fetch\("\/editor\/api\/beat\/desk"/);
+
+  assert.match(middleware, /url\.pathname !== ['"]\/editor\/beat['"]/);
+  assert.match(middleware, /searchParams\.get\(['"]beatAction['"]\)/);
+  assert.match(middleware, /operation === ['"]desk['"]/);
+  assert.match(middleware, /operation === ['"]mutate['"]/);
+  assert.match(middleware, /operation === ['"]create['"]/);
+  assert.match(middleware, /operation === ['"]discover['"]/);
+  assert.match(middleware, /cf-access-authenticated-user-email/);
+
+  assert.match(editor, /BEAT_DESK_PATH = ['"]\/editor\/beat['"]/);
+  assert.match(editor, /beatAction=/);
+  assert.match(editor, /createBeatItemViaAccess/);
+  assert.match(editor, /discoverBeatCandidatesViaAccess/);
+  assert.doesNotMatch(editor, /fetch\(['"]\/editor\/api\/beat/);
+  assert.doesNotMatch(editor, /createBeatItem\s*\(\{\s*data:/);
+  assert.doesNotMatch(editor, /discoverBeatCandidates\s*\(\{\s*data:/);
+
+  assert.match(start, /beatAdminMiddleware/);
   assert.doesNotMatch(vite, /serverFns:\s*\{\s*base:\s*['"]\/editor/);
   assert.doesNotMatch(standalone, /serverFns:\s*\{\s*base:\s*['"]\/editor/);
 });
