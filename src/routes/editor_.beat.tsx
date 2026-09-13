@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { getSiteAccess } from "@/lib/publishing/api";
-import { getBeatAdminDesk, createBeatItem, discoverBeatCandidates, type BeatDeskPayload } from "@/lib/beat/api";
+import { getBeatAdminDesk, type BeatDeskPayload } from "@/lib/beat/api";
 import {
   BEAT_CATEGORIES,
   BEAT_CATEGORY_LABELS,
@@ -30,6 +30,17 @@ type ProtectedDeskResponse = {
   error?: string;
 };
 
+type DiscoveryResponse = {
+  ok?: boolean;
+  candidates: unknown[];
+  skippedDuplicates: number;
+  inserted?: number;
+  errors?: string[];
+  error?: string;
+};
+
+const BEAT_DESK_PATH = "/editor/beat";
+
 async function readJsonResponse(response: Response): Promise<Record<string, unknown>> {
   const contentType = response.headers.get("content-type") ?? "";
   if (response.redirected || !contentType.toLowerCase().includes("application/json")) {
@@ -38,30 +49,40 @@ async function readJsonResponse(response: Response): Promise<Record<string, unkn
   return (await response.json()) as Record<string, unknown>;
 }
 
-async function loadProtectedBeatDesk(): Promise<{ access: SiteAccess; desk: BeatDeskPayload }> {
-  const response = await fetch("/editor/api/beat/desk", {
-    method: "GET",
+async function beatDeskRequest(operation: string, method: "GET" | "POST", data?: unknown): Promise<Record<string, unknown>> {
+  const response = await fetch(`${BEAT_DESK_PATH}?beatAction=${encodeURIComponent(operation)}`, {
+    method,
     credentials: "same-origin",
-    headers: { Accept: "application/json" },
+    headers: method === "POST"
+      ? { "Content-Type": "application/json", Accept: "application/json" }
+      : { Accept: "application/json" },
+    ...(method === "POST" ? { body: JSON.stringify(data ?? {}) } : {}),
   });
-  const body = (await readJsonResponse(response)) as ProtectedDeskResponse;
-  if (!response.ok || !body.ok || !body.access || !body.desk) {
+  const body = await readJsonResponse(response);
+  if (!response.ok || body.ok !== true) {
+    throw new Error(typeof body.error === "string" ? body.error : "Beat action failed.");
+  }
+  return body;
+}
+
+async function loadProtectedBeatDesk(): Promise<{ access: SiteAccess; desk: BeatDeskPayload }> {
+  const body = (await beatDeskRequest("desk", "GET")) as ProtectedDeskResponse;
+  if (!body.access || !body.desk) {
     throw new Error(body.error || "Could not load the Beat desk.");
   }
   return { access: body.access, desk: body.desk };
 }
 
 async function mutateBeatItemViaAccess(data: BeatMutationInput): Promise<void> {
-  const response = await fetch("/editor/api/beat/mutate", {
-    method: "POST",
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify(data),
-  });
-  const body = await readJsonResponse(response);
-  if (!response.ok || body.ok !== true) {
-    throw new Error(typeof body.error === "string" ? body.error : "Beat action failed.");
-  }
+  await beatDeskRequest("mutate", "POST", data);
+}
+
+async function createBeatItemViaAccess(data: unknown): Promise<void> {
+  await beatDeskRequest("create", "POST", data);
+}
+
+async function discoverBeatCandidatesViaAccess(data: { dryRun: boolean; perAccountLimit: number }): Promise<DiscoveryResponse> {
+  return (await beatDeskRequest("discover", "POST", data)) as unknown as DiscoveryResponse;
 }
 
 /** Surface serverFn / Access failures clearly (opaque HTML redirects, serialized errors). */
@@ -209,7 +230,7 @@ function BeatEditorPage() {
           disabled={busy}
           onClick={() =>
             void run(
-              () => discoverBeatCandidates({ data: { dryRun: false, perAccountLimit: 2 } }),
+              () => discoverBeatCandidatesViaAccess({ dryRun: false, perAccountLimit: 2 }),
               "Discovery finished — new rows are pending only.",
             )
           }
@@ -222,7 +243,7 @@ function BeatEditorPage() {
           disabled={busy}
           onClick={() =>
             void run(async () => {
-              const result = await discoverBeatCandidates({ data: { dryRun: true, perAccountLimit: 2 } });
+              const result = await discoverBeatCandidatesViaAccess({ dryRun: true, perAccountLimit: 2 });
               setMessageTone("ok");
               setMessage(`Dry-run: ${result.candidates.length} candidates, ${result.skippedDuplicates} dupes.`);
             }, "")
@@ -371,13 +392,10 @@ function BeatEditorPage() {
                 e.preventDefault();
                 void run(
                   () =>
-                    createBeatItem({
-                      data: {
-                        ...draft,
-                        teamSlug: draft.teamSlug || null,
-                        expiresAt: draft.expiresAt || null,
-                        approveNow: false,
-                      },
+                    createBeatItemViaAccess({
+                      ...draft,
+                      teamSlug: draft.teamSlug || null,
+                      expiresAt: draft.expiresAt || null,
                     }),
                   "Candidate saved as pending.",
                 );
