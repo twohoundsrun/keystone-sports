@@ -19,6 +19,8 @@ export const Route = createFileRoute('/editor')({
 });
 
 type Draft = { id?: string; date: string; kind: Post['kind']; title: string; body: string; eventTime: string; teamSlug?: string | null; published: boolean };
+type MessageTone = 'info' | 'success' | 'error';
+type BusyAction = 'save' | 'publish' | 'recap' | null;
 
 function empty(): Draft {
   return { date: dateKeyNY(), kind: 'note', title: '', body: '', eventTime: '', teamSlug: '', published: false };
@@ -34,7 +36,9 @@ function Editor() {
   const [draft, setDraft] = useState<Draft>(empty);
   const [posts, setPosts] = useState(initial);
   const [message, setMessage] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [messageTone, setMessageTone] = useState<MessageTone>('info');
+  const [busyAction, setBusyAction] = useState<BusyAction>(null);
+  const busy = busyAction !== null;
 
   if (!access.admin) {
     return (
@@ -57,35 +61,43 @@ function Editor() {
   }
 
   async function save(publish: boolean) {
-    setBusy(true);
+    setBusyAction(publish ? 'publish' : 'save');
     setMessage('');
+    setMessageTone('info');
     try {
-      const result = await saveEditorPost({ data: { ...draft, eventTime: draft.eventTime || null, published: publish } });
-      setDraft((d) => ({ ...d, id: result.id, published: publish }));
+      const title = publish ? draft.title.replace(/\s*\(draft\)\s*$/i, '') : draft.title;
+      const result = await saveEditorPost({ data: { ...draft, title, eventTime: draft.eventTime || null, published: publish } });
+      setDraft((d) => ({ ...d, id: result.id, title, published: publish }));
       setPosts(await getEditorPosts());
-      setMessage(publish ? 'Published on Scores and Calendar for this date.' : 'Draft saved privately. It is not visible to visitors.');
+      setMessageTone('success');
+      setMessage(publish ? 'Published successfully. This story is now public.' : 'Draft saved privately. It is not visible to visitors.');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Save failed. Your draft is still here.');
+      setMessageTone('error');
+      setMessage(error instanceof Error ? `Publish failed: ${error.message}` : 'Publish failed. Your draft is still here.');
     } finally {
-      setBusy(false);
+      setBusyAction(null);
     }
   }
 
   async function generateRecap() {
-    setBusy(true);
+    setBusyAction('recap');
     setMessage('');
+    setMessageTone('info');
     try {
       const result = await runOwnerRecap({ data: { date: draft.date } });
       setPosts(await getEditorPosts());
       if (result.ok) {
+        setMessageTone('success');
         setMessage(`Recap draft saved for ${result.date}. Open it from Saved posts.`);
       } else {
+        setMessageTone('error');
         setMessage(result.error);
       }
     } catch (error) {
+      setMessageTone('error');
       setMessage(error instanceof Error ? error.message : 'Recap failed.');
     } finally {
-      setBusy(false);
+      setBusyAction(null);
     }
   }
 
@@ -132,14 +144,36 @@ function Editor() {
             <Textarea className="min-h-48" required maxLength={10000} value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} />
           </label>
           <div className="flex flex-wrap gap-3">
-            <Button disabled={busy} type="submit">Save draft / unpublish</Button>
-            <Button disabled={busy || !draft.title.trim() || !draft.body.trim()} type="button" onClick={() => void save(true)}>Publish</Button>
-            <Button disabled={busy} type="button" variant="outline" onClick={() => void generateRecap()}>Generate recap</Button>
-            <Button variant="outline" type="button" onClick={() => { if (!draft.body || window.confirm('Start a new draft? Unsaved edits will be discarded.')) setDraft(empty()); }}>New post</Button>
+            <Button disabled={busy} type="submit">{busyAction === 'save' ? 'Saving…' : 'Save draft / unpublish'}</Button>
+            <Button disabled={busy || !draft.title.trim() || !draft.body.trim()} type="button" onClick={() => void save(true)}>
+              {busyAction === 'publish' ? 'Publishing…' : draft.published ? '✓ Published' : 'Publish'}
+            </Button>
+            <Button disabled={busy} type="button" variant="outline" onClick={() => void generateRecap()}>{busyAction === 'recap' ? 'Generating…' : 'Generate recap'}</Button>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => {
+                if (!draft.body || window.confirm('Start a new draft? Unsaved edits will be discarded.')) {
+                  setDraft(empty());
+                  setMessage('');
+                  setMessageTone('info');
+                }
+              }}
+            >
+              New post
+            </Button>
           </div>
+          {message ? (
+            <p
+              role="status"
+              aria-live="polite"
+              className={`rounded border border-border bg-surface px-3 py-2 text-sm ${messageTone === 'error' ? 'text-danger' : messageTone === 'success' ? 'text-accent' : 'text-muted'}`}
+            >
+              {message}
+            </p>
+          ) : null}
           <p className="text-sm text-muted">Generate recap writes a private draft for the date above. It spends a little OpenAI credit. A recap tagged to a team appears in that team’s recap archive once published.</p>
           {!access.aiEnabled ? <p className="text-sm text-danger">AI key is not visible to the Worker yet. Recap generate will fail until AI_API_KEY is readable.</p> : null}
-          <p role="status">{message}</p>
         </form>
       </section>
       <aside>
@@ -152,6 +186,8 @@ function Editor() {
                 onClick={() => {
                   if (draft.body && !window.confirm('Open this post? Unsaved edits will be discarded.')) return;
                   setDraft({ ...p, eventTime: p.eventTime ?? '', published: Boolean(p.published) });
+                  setMessage('');
+                  setMessageTone('info');
                 }}
               >
                 <strong>{p.title}</strong>
