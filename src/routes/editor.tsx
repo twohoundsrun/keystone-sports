@@ -19,8 +19,8 @@ type ProtectedPublisherResponse = {
   ok: boolean;
   access?: SiteAccess;
   posts?: Post[];
+  post?: Post;
   id?: string;
-  title?: string;
   date?: string;
   error?: string;
 };
@@ -34,7 +34,7 @@ async function readProtectedJson(response: Response): Promise<ProtectedPublisher
 }
 
 async function loadProtectedPublisherDesk(): Promise<{ access: SiteAccess; posts: Post[] }> {
-  const response = await fetch('/editor/api/publisher/desk', {
+  const response = await fetch('/editor?publisher=desk', {
     method: 'GET',
     credentials: 'same-origin',
     headers: { Accept: 'application/json' },
@@ -46,22 +46,24 @@ async function loadProtectedPublisherDesk(): Promise<{ access: SiteAccess; posts
   return { access: body.access, posts: body.posts };
 }
 
-async function saveEditorPostViaAccess(data: Draft): Promise<{ id: string; title: string }> {
-  const response = await fetch('/editor/api/publisher/save', {
+type Draft = { id?: string; date: string; kind: Post['kind']; title: string; body: string; eventTime: string; teamSlug?: string | null; published: boolean };
+
+async function saveEditorPostViaAccess(data: Draft): Promise<Post> {
+  const response = await fetch('/editor?publisher=save', {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify({ ...data, eventTime: data.eventTime || null }),
   });
   const body = await readProtectedJson(response);
-  if (!response.ok || !body.ok || !body.id) {
+  if (!response.ok || !body.ok || !body.post) {
     throw new Error(body.error || 'The post could not be saved.');
   }
-  return { id: body.id, title: body.title || data.title };
+  return body.post;
 }
 
 async function runOwnerRecapViaAccess(date: string): Promise<{ ok: boolean; id?: string; date?: string; error?: string }> {
-  const response = await fetch('/editor/api/publisher/recap', {
+  const response = await fetch('/editor?publisher=recap', {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -85,7 +87,6 @@ export const Route = createFileRoute('/editor')({
   component: Editor,
 });
 
-type Draft = { id?: string; date: string; kind: Post['kind']; title: string; body: string; eventTime: string; teamSlug?: string | null; published: boolean };
 type MessageTone = 'info' | 'success' | 'error';
 type BusyAction = 'save' | 'publish' | 'recap' | null;
 
@@ -138,9 +139,9 @@ function Editor() {
     setMessageTone('info');
     try {
       const title = publish ? draft.title.replace(/\s*\(draft\)\s*$/i, '') : draft.title;
-      const result = await saveEditorPostViaAccess({ ...draft, title, published: publish });
-      setDraft((d) => ({ ...d, id: result.id, title: result.title, published: publish }));
-      await refreshPosts();
+      const saved = await saveEditorPostViaAccess({ ...draft, title, published: publish });
+      setDraft((d) => ({ ...d, id: saved.id, title: saved.title, published: Boolean(saved.published) }));
+      setPosts((current) => [saved, ...current.filter((post) => post.id !== saved.id)]);
       setMessageTone('success');
       setMessage(publish ? 'Published successfully. This story is now public.' : 'Draft saved privately. It is not visible to visitors.');
     } catch (error) {
@@ -159,8 +160,8 @@ function Editor() {
     setMessageTone('info');
     try {
       const result = await runOwnerRecapViaAccess(draft.date);
-      await refreshPosts();
       if (result.ok) {
+        await refreshPosts();
         setMessageTone('success');
         setMessage(`Recap draft saved for ${result.date ?? draft.date}. Open it from Saved posts.`);
       } else {
