@@ -53,8 +53,27 @@ export const saveEditorPost = createServerFn({ method: 'POST' }).validator(input
   const userId = requireAdmin();
   const id = data.id ?? crypto.randomUUID();
   const team = data.teamSlug?.trim() || null;
-  await db().prepare('INSERT INTO posts (id, author_id, date, kind, title, body, event_time, team_slug, published, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET date = excluded.date, kind = excluded.kind, title = excluded.title, body = excluded.body, event_time = excluded.event_time, team_slug = excluded.team_slug, published = excluded.published, updated_at = excluded.updated_at WHERE posts.author_id = excluded.author_id OR posts.author_id = \'auto\'')
-    .bind(id, userId, data.date, data.kind, data.title, data.body, data.eventTime, team, Number(data.published), new Date().toISOString()).run();
+  const now = new Date().toISOString();
+  const published = Number(data.published);
+
+  if (data.id) {
+    const result = await db()
+      .prepare(
+        'UPDATE posts SET date = ?, kind = ?, title = ?, body = ?, event_time = ?, team_slug = ?, published = ?, updated_at = ? WHERE id = ? AND (author_id = ? OR author_id = ?)',
+      )
+      .bind(data.date, data.kind, data.title, data.body, data.eventTime, team, published, now, data.id, userId, 'auto')
+      .run();
+    const changed = Number((result as { meta?: { changes?: number } } | undefined)?.meta?.changes ?? 0);
+    if (!changed) throw new Error('Could not update that post. Reload /editor and try Publish again.');
+    return { id: data.id };
+  }
+
+  await db()
+    .prepare(
+      'INSERT INTO posts (id, author_id, date, kind, title, body, event_time, team_slug, published, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    )
+    .bind(id, userId, data.date, data.kind, data.title, data.body, data.eventTime, team, published, now)
+    .run();
   return { id };
 });
 
