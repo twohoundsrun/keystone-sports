@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getPublishedPosts } from "@/lib/publishing/api";
+import { fetchPublishedPosts } from "@/lib/publishing/public-api";
 import type { Post } from "@/lib/publishing/types";
 
 const PREVIEW_CHARS = 400;
@@ -48,12 +48,10 @@ export function PublishedUpdates({ date }: { date?: string }) {
   useEffect(() => {
     let active = true;
     setPosts([]);
-    void getPublishedPosts({ data: { date } })
+    setError(false);
+    void fetchPublishedPosts(date)
       .then((p) => {
-        if (active) {
-          setPosts(p);
-          setError(false);
-        }
+        if (active) setPosts(p);
       })
       .catch(() => {
         if (active) setError(true);
