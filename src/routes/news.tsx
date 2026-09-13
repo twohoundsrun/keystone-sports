@@ -6,13 +6,19 @@ import { BreakingAlert, DeskArticle, LockerRoom, WireList, isPremiumBeat } from 
 
 import { getNewsWire } from "@/lib/sports/api";
 import { getBeatDesk } from "@/lib/beat/api";
+import { getPublishedPosts } from "@/lib/publishing/api";
+import type { Post } from "@/lib/publishing/types";
 import { rankPaNews } from "@/lib/sports/filter";
 import { useFollows } from "@/lib/sports/follow-store";
 
 export const Route = createFileRoute("/news")({
   loader: async () => {
-    const [wire, beat] = await Promise.all([getNewsWire(), getBeatDesk()]);
-    return { wire, beat };
+    const [wire, beat, reports] = await Promise.all([
+      getNewsWire(),
+      getBeatDesk(),
+      getPublishedPosts({ data: {} }).catch(() => [] as Post[]),
+    ]);
+    return { wire, beat, reports };
   },
   staleTime: 60_000,
   pendingComponent: PendingScreen,
@@ -23,8 +29,13 @@ export const Route = createFileRoute("/news")({
   component: NewsPage,
 });
 
+function reportPreview(body: string): string {
+  const clean = body.trim();
+  return clean.length > 260 ? `${clean.slice(0, 260).trimEnd()}…` : clean;
+}
+
 function NewsPage() {
-  const { wire, beat } = Route.useLoaderData();
+  const { wire, beat, reports } = Route.useLoaderData();
   const followed = useFollows((s) => s.slugs);
   const ranked = rankPaNews(wire.articles, followed);
   const premium = beat.enabled ? beat.items.filter(isPremiumBeat) : [];
@@ -32,6 +43,9 @@ function NewsPage() {
   const deskWire = ranked.filter((a) => a.image).slice(0, 8);
   const used = new Set(deskWire.map((a) => a.id));
   const wireList = ranked.filter((a) => !used.has(a.id));
+  const publishedReports = [...(reports ?? [])]
+    .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""))
+    .slice(0, 8);
   const highlights = [...(wire.highlights ?? [])].sort((a, b) => {
     const af = a.teamSlug && followed.includes(a.teamSlug) ? 0 : 1;
     const bf = b.teamSlug && followed.includes(b.teamSlug) ? 0 : 1;
@@ -57,6 +71,37 @@ function NewsPage() {
       ) : null}
 
       {beat.enabled ? <BeatModule items={deskBeat} generatedAt={beat.generatedAt} /> : null}
+
+      {publishedReports.length ? (
+        <section className="mt-10" aria-label="Keystone Beat reports">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="font-display text-t4 tracking-display">Keystone Beat reports</h2>
+              <p className="mt-1 text-t2 text-muted">Published recaps and editor notes from Keystone Beat.</p>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {publishedReports.map((post, index) => (
+              <article
+                key={post.id}
+                className={`rounded-md border bg-surface p-4 shadow-[var(--shadow-border)] ${index === 0 ? "border-accent/50 sm:col-span-2" : "border-border"}`}
+              >
+                <p className="text-xs font-semibold uppercase tracking-wider text-accent">
+                  {post.kind === "recap" ? "Recap" : post.kind === "event" ? "Event" : "Update"} · {post.date}
+                </p>
+                <h3 className={`mt-2 font-display leading-tight ${index === 0 ? "text-3xl" : "text-2xl"}`}>{post.title}</h3>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-muted">{reportPreview(post.body)}</p>
+                <a
+                  href={`/?date=${encodeURIComponent(post.date)}`}
+                  className="mt-3 inline-flex text-sm font-semibold text-accent underline-offset-2 hover:underline"
+                >
+                  Open that day's Scores page
+                </a>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {deskWire.length ? (
         <section className="mt-10" aria-label="Beat desk">
