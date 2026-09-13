@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { getSiteAccess, getEditorPosts, saveEditorPost, runOwnerRecap } from '@/lib/publishing/api';
+import { getSiteAccess, getEditorPosts } from '@/lib/publishing/api';
 import type { Post } from '@/lib/publishing/types';
 import { dateKeyNY } from '@/lib/sports/time';
 import { TEAMS } from '@/data/teams';
@@ -8,8 +8,75 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
+type SiteAccess = {
+  signedIn: boolean;
+  admin: boolean;
+  adminConfigured: boolean;
+  aiEnabled: boolean;
+};
+
+type ProtectedPublisherResponse = {
+  ok: boolean;
+  access?: SiteAccess;
+  posts?: Post[];
+  id?: string;
+  title?: string;
+  date?: string;
+  error?: string;
+};
+
+async function readProtectedJson(response: Response): Promise<ProtectedPublisherResponse> {
+  const contentType = response.headers.get('content-type') ?? '';
+  if (response.redirected || !contentType.toLowerCase().includes('application/json')) {
+    throw new Error('Cloudflare Access session missing on this action. Reload /editor while signed in as the owner, then try again.');
+  }
+  return (await response.json()) as ProtectedPublisherResponse;
+}
+
+async function loadProtectedPublisherDesk(): Promise<{ access: SiteAccess; posts: Post[] }> {
+  const response = await fetch('/editor/api/publisher/desk', {
+    method: 'GET',
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+  const body = await readProtectedJson(response);
+  if (!response.ok || !body.ok || !body.access || !body.posts) {
+    throw new Error(body.error || 'Could not load Publisher.');
+  }
+  return { access: body.access, posts: body.posts };
+}
+
+async function saveEditorPostViaAccess(data: Draft): Promise<{ id: string; title: string }> {
+  const response = await fetch('/editor/api/publisher/save', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ ...data, eventTime: data.eventTime || null }),
+  });
+  const body = await readProtectedJson(response);
+  if (!response.ok || !body.ok || !body.id) {
+    throw new Error(body.error || 'The post could not be saved.');
+  }
+  return { id: body.id, title: body.title || data.title };
+}
+
+async function runOwnerRecapViaAccess(date: string): Promise<{ ok: boolean; id?: string; date?: string; error?: string }> {
+  const response = await fetch('/editor/api/publisher/recap', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ date }),
+  });
+  const body = await readProtectedJson(response);
+  if (!response.ok && response.status !== 422) {
+    throw new Error(body.error || 'Recap failed.');
+  }
+  return body;
+}
+
 export const Route = createFileRoute('/editor')({
   loader: async () => {
+    if (typeof window !== 'undefined') return loadProtectedPublisherDesk();
     const access = await getSiteAccess();
     return { access, posts: access.admin ? await getEditorPosts() : [] as Post[] };
   },
@@ -60,20 +127,27 @@ function Editor() {
     );
   }
 
+  async function refreshPosts() {
+    const fresh = await loadProtectedPublisherDesk();
+    setPosts(fresh.posts);
+  }
+
   async function save(publish: boolean) {
     setBusyAction(publish ? 'publish' : 'save');
     setMessage('');
     setMessageTone('info');
     try {
       const title = publish ? draft.title.replace(/\s*\(draft\)\s*$/i, '') : draft.title;
-      const result = await saveEditorPost({ data: { ...draft, title, eventTime: draft.eventTime || null, published: publish } });
-      setDraft((d) => ({ ...d, id: result.id, title, published: publish }));
-      setPosts(await getEditorPosts());
+      const result = await saveEditorPostViaAccess({ ...draft, title, published: publish });
+      setDraft((d) => ({ ...d, id: result.id, title: result.title, published: publish }));
+      await refreshPosts();
       setMessageTone('success');
       setMessage(publish ? 'Published successfully. This story is now public.' : 'Draft saved privately. It is not visible to visitors.');
     } catch (error) {
       setMessageTone('error');
-      setMessage(error instanceof Error ? `Publish failed: ${error.message}` : 'Publish failed. Your draft is still here.');
+      const fallback = publish ? 'Publish failed. Your draft is still here.' : 'Save failed. Your draft is still here.';
+      const prefix = publish ? 'Publish failed: ' : 'Save failed: ';
+      setMessage(error instanceof Error ? `${prefix}${error.message}` : fallback);
     } finally {
       setBusyAction(null);
     }
@@ -84,14 +158,14 @@ function Editor() {
     setMessage('');
     setMessageTone('info');
     try {
-      const result = await runOwnerRecap({ data: { date: draft.date } });
-      setPosts(await getEditorPosts());
+      const result = await runOwnerRecapViaAccess(draft.date);
+      await refreshPosts();
       if (result.ok) {
         setMessageTone('success');
-        setMessage(`Recap draft saved for ${result.date}. Open it from Saved posts.`);
+        setMessage(`Recap draft saved for ${result.date ?? draft.date}. Open it from Saved posts.`);
       } else {
         setMessageTone('error');
-        setMessage(result.error);
+        setMessage(result.error || 'Recap failed.');
       }
     } catch (error) {
       setMessageTone('error');
