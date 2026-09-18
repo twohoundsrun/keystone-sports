@@ -21,10 +21,12 @@ export function FeedStatus({ at, warnings = [] }: { at: string; warnings?: strin
         <RefreshCw className={cn("h-3.5 w-3.5 shrink-0", spin && "animate-spin")} aria-hidden />
         <span>Data checked {when} · Times Eastern</span>
       </p>
-      {age > 90_000 || warnings.length ? (
+      {warnings.length ? (
         <p className="mt-1 text-warn">
-          Updates delayed. {warnings.join(" · ")} Empty results may be incomplete.
+          Some feeds unavailable: {warnings.join(" · ")}. Empty results may be incomplete.
         </p>
+      ) : age > 90_000 ? (
+        <p className="mt-1 text-warn">Updates delayed — showing the last available scores.</p>
       ) : null}
     </div>
   );
