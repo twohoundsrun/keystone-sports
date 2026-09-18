@@ -2,6 +2,7 @@ import { useEffect, useMemo, type ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { CalendarDays, ListOrdered, Newspaper, Shield, Table2, Trophy } from "lucide-react";
 import { ScoreTicker } from "@/components/score-ticker";
+import { ThemeSelector } from "@/components/theme-selector";
 import { ResponsibleGamblingNote } from "@/components/responsible-gambling-note";
 import { teamsByFollowed } from "@/data/teams";
 import { useDesk } from "@/lib/sports/desk-store";
@@ -53,12 +54,12 @@ export function DeskShell({ children }: { children: ReactNode }) {
       <div className="sticky top-0 z-20">
         <ScoreTicker />
         <header className="border-b border-border bg-bg/95 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
-          <Link to="/" className="flex h-11 shrink-0 items-center gap-2.5">
-            <KeystoneMark className="h-9 w-9" />
+        <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-3 sm:gap-4 sm:px-6">
+          <Link to="/" className="flex h-11 shrink-0 items-center gap-2 sm:gap-2.5">
+            <KeystoneMark className="h-8 w-8 sm:h-9 sm:w-9" />
             <span className="leading-none">
-              <span className="block font-display text-xl font-semibold tracking-widest sm:text-2xl">KEYSTONE BEAT</span>
-              <span className="block text-xs font-semibold uppercase tracking-widest text-accent">
+              <span className="block font-display text-lg font-semibold tracking-widest sm:text-2xl">KEYSTONE BEAT</span>
+              <span className="block text-[10px] font-semibold uppercase tracking-widest text-accent sm:text-xs">
                 Pennsylvania Sports
               </span>
             </span>
@@ -82,6 +83,9 @@ export function DeskShell({ children }: { children: ReactNode }) {
               );
             })}
           </nav>
+          <div className="ml-auto md:ml-0">
+            <ThemeSelector />
+          </div>
         </div>
         </header>
       </div>
