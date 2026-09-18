@@ -6,6 +6,20 @@ import appCss from "../styles.css?url";
 
 const APP_NAME = "Keystone Beat";
 
+const themeBootScript = `(() => {
+  try {
+    const stored = localStorage.getItem("keystone-beat-theme");
+    const choice = stored === "light" || stored === "dark" || stored === "system" ? stored : "system";
+    const theme = choice === "system"
+      ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+      : choice;
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.dataset.themeChoice = choice;
+    document.documentElement.style.colorScheme = theme;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#0a0e16" : "#f4f7fa");
+  } catch {}
+})();`;
+
 export const Route = createRootRoute({
   head: () => ({
     meta: [
@@ -37,6 +51,7 @@ export const Route = createRootRoute({
     <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
       </head>
       <body className="bg-bg text-fg antialiased">
         {import.meta.env.VITE_STANDALONE !== "true" ? <PreviewHostBridge /> : null}
