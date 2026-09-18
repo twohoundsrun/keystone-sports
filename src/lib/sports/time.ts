@@ -98,6 +98,17 @@ export function addDays(key: string, days: number): string {
   return dt.toISOString().slice(0, 10);
 }
 
+/** Inclusive YYYY-MM-DD walk. Empty when either side is invalid or end < start. */
+export function eachDate(start: string, end: string): string[] {
+  if (!validDate(start) || !validDate(end) || end < start) return [];
+  const days: string[] = [];
+  for (let d = start; d <= end; d = addDays(d, 1)) {
+    days.push(d);
+    if (days.length > 366) break;
+  }
+  return days;
+}
+
 export function monthBounds(month: string): { start: string; end: string } {
   const [y, m] = month.split("-").map(Number);
   const start = `${y}-${String(m).padStart(2, "0")}-01`;
