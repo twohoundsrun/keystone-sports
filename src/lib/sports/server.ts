@@ -626,14 +626,13 @@ async function liveScoreboards(day: string): Promise<Game[]> {
 }
 
 async function weekOddsBoards(day: string): Promise<Game[]> {
-  // One ranged board per league — undated + single-day copies were duplicate cold-cache work.
-  // Start at day+1 so today's NFL/CFB/MLB overlap with liveScoreboards instead of racing it.
-  const footballRange = `${espnDateParam(addDays(day, 1))}-${espnDateParam(addDays(day, 10))}`;
-  const mlbRange = `${espnDateParam(addDays(day, 1))}-${espnDateParam(addDays(day, 6))}`;
+  // ESPN's scoreboard endpoint no longer reliably accepts date ranges.
+  // Keep the lightweight odds supplement to a single next-day request per league.
+  const next = espnDateParam(addDays(day, 1));
   const chunks = await Promise.all([
-    espnScoreboard("football", "nfl", footballRange).catch(() => []),
-    espnScoreboard("football", "college-football", footballRange).catch(() => []),
-    espnScoreboard("baseball", "mlb", mlbRange).catch(() => []),
+    espnScoreboard("football", "nfl", next).catch(() => []),
+    espnScoreboard("football", "college-football", next).catch(() => []),
+    espnScoreboard("baseball", "mlb", next).catch(() => []),
   ]);
   return chunks.flat();
 }
@@ -689,12 +688,18 @@ function activeScoreboardLeagues(day: string) {
   });
 }
 
-async function scoreboardRange(start: string, end = start) {
-  const dates = start === end ? espnDateParam(start) : `${espnDateParam(start)}-${espnDateParam(end)}`;
-  const leagues = activeScoreboardLeagues(start);
+async function scoreboardDate(day: string) {
+  const dates = espnDateParam(day);
+  const leagues = activeScoreboardLeagues(day);
   const results = await Promise.allSettled(leagues.map(([sport, league]) => espnScoreboard(sport, league, dates)));
   return { games: results.flatMap(r => r.status === 'fulfilled' ? r.value : []),
     warnings: results.flatMap((r, i) => r.status === 'rejected' ? [`${leagues[i][1].toUpperCase()} feed unavailable`] : []) };
+}
+
+function nearCurrentDate(day: string, maxDays = 45): boolean {
+  const target = Date.parse(`${day}T12:00:00Z`);
+  const current = Date.parse(`${dateKeyNY()}T12:00:00Z`);
+  return Number.isFinite(target) && Number.isFinite(current) && Math.abs(target - current) <= maxDays * 86_400_000;
 }
 async function safeMlb(start: string, end: string) {
   try { return { games: await mlbSchedule(start, end), warnings: [] as string[] }; }
@@ -709,13 +714,18 @@ function freshness(games: Game[], warnings: string[]) {
 export async function loadToday(date?: string) {
   const day = checkedDate(date);
   return cached(`day:${day}`, 20_000, async () => {
-    // Single window covers today + nearby strip. The old day + day-2..day+10 pair
-    // doubled every league scoreboard (~14 ESPN payloads) on each cold homepage load.
-    const [scores, mlb] = await Promise.all([
-      scoreboardRange(addDays(day, -2), addDays(day, 10)),
+    // ESPN range scoreboard requests began failing in September 2026. Use one
+    // scoreboard request per active league for the selected day, then fill the
+    // nearby strip from PA team schedules plus the MLB schedule API.
+    const schedules = nearCurrentDate(day)
+      ? timed(espnSchedulesForPa(), 10_000, [] as Game[])
+      : Promise.resolve([] as Game[]);
+    const [scores, nearby, mlb] = await Promise.all([
+      scoreboardDate(day),
+      schedules,
       safeMlb(addDays(day, -2), addDays(day, 10)),
     ]);
-    const games = mergeGames(mlb.games, scores.games);
+    const games = mergeGames(mlb.games, mergeGames(scores.games, nearby));
     const board = sliceToday(day, games);
     return { ...board, ...freshness(board.games, [...scores.warnings, ...mlb.warnings]) };
   }, 5 * 60_000);
@@ -725,9 +735,14 @@ export async function loadMonth(month?: string) {
   checkedDate(`${m}-01`);
   return cached(`month:${m}`, 90_000, async () => {
     const { start, end } = monthBounds(m);
-    const [mlb, range] = await Promise.all([safeMlb(start, end), scoreboardRange(start, end)]);
-    const games = mergeGames(mlb.games, range.games).filter(g => g.dateKey >= start && g.dateKey <= end).sort(byStart);
-    return { month: m, games, ...freshness(games, [...mlb.warnings, ...range.warnings]) };
+    // Team schedules are a better fit for a PA-only calendar and avoid ESPN's
+    // broken month-sized scoreboard range request entirely.
+    const [mlb, schedules] = await Promise.all([
+      safeMlb(start, end),
+      timed(espnSchedulesForPa(), 10_000, [] as Game[]),
+    ]);
+    const games = mergeGames(mlb.games, schedules).filter(g => g.dateKey >= start && g.dateKey <= end).sort(byStart);
+    return { month: m, games, ...freshness(games, mlb.warnings) };
   }, 10 * 60_000);
 }
 

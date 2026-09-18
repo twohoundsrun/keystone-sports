@@ -65,14 +65,14 @@ test('historical board fetches the requested date rather than filtering the pres
   const server = moduleFunctions('src/lib/sports/server.ts', ['loadToday', 'parseEspnEvent'], { SportsCache, ...identity, ...time, ...teams, ...briefs, ...providers, fetch });
   const board = await server.loadToday('2020-01-01');
   const dateParams = urls.map(u => new URL(u).searchParams.get('dates')).filter(Boolean);
-  // One window (day-2..day+10), not a separate single-day + nearby pair.
-  assert(dateParams.includes('20191230-20200111'));
-  assert(!dateParams.includes('20200101'));
+  // Historical boards use the exact requested day; ESPN date ranges are not reliable.
+  assert(dateParams.includes('20200101'));
+  assert(dateParams.every(p => !p.includes('-')));
   assert.equal(board.games[0].dateKey, '2020-01-01'); assert.equal(board.games[0].home.score, '21');
   assert.equal(server.parseEspnEvent({ ...fixture, status: { type: { state: 'pre', shortDetail: 'Postponed' } } }, 'nfl').statusText, 'Postponed');
 });
 
-test('loadToday does not double-fetch every league scoreboard', async () => {
+test('loadToday uses single-day ESPN scoreboards and schedule fallbacks', async () => {
   const urls = [];
   const fetch = async url => {
     urls.push(url);
@@ -83,9 +83,41 @@ test('loadToday does not double-fetch every league scoreboard', async () => {
   const server = moduleFunctions('src/lib/sports/server.ts', ['loadToday'], { SportsCache, ...identity, ...time, ...teams, ...briefs, ...providers, fetch });
   await server.loadToday('2026-09-10');
   const scoreboardUrls = urls.filter(u => String(u).includes('/scoreboard'));
-  // Five in-season leagues (NBA/NCAAB skipped in September) × one window.
+  // Five in-season leagues (NBA/NCAAB skipped in September) × the selected day only.
   assert.equal(scoreboardUrls.length, 5);
-  assert(scoreboardUrls.every(u => new URL(u).searchParams.get('dates') === '20260908-20260920'));
+  assert(scoreboardUrls.every(u => new URL(u).searchParams.get('dates') === '20260910'));
+  assert(scoreboardUrls.every(u => !new URL(u).searchParams.get('dates').includes('-')));
+  assert(urls.some(u => String(u).includes('/schedule')));
+});
+
+test('week odds supplement never sends an ESPN date range', async () => {
+  const urls = [];
+  const fetch = async url => {
+    urls.push(String(url));
+    const body = { events: [], dates: [] };
+    const raw = JSON.stringify(body);
+    return { ok: true, status: 200, json: async () => body, text: async () => raw };
+  };
+  const server = moduleFunctions('src/lib/sports/server.ts', ['weekOddsBoards'], { SportsCache, ...identity, ...time, ...teams, ...briefs, ...providers, fetch });
+  await server.weekOddsBoards('2026-09-10');
+  const scoreboardUrls = urls.filter(u => u.includes('/scoreboard'));
+  assert.equal(scoreboardUrls.length, 3);
+  assert(scoreboardUrls.every(u => new URL(u).searchParams.get('dates') === '20260911'));
+  assert(scoreboardUrls.every(u => !new URL(u).searchParams.get('dates').includes('-')));
+});
+
+test('calendar month uses PA schedules instead of ESPN range scoreboards', async () => {
+  const urls = [];
+  const fetch = async url => {
+    urls.push(String(url));
+    const body = { events: [], dates: [] };
+    const raw = JSON.stringify(body);
+    return { ok: true, status: 200, json: async () => body, text: async () => raw };
+  };
+  const server = moduleFunctions('src/lib/sports/server.ts', ['loadMonth'], { SportsCache, ...identity, ...time, ...teams, ...briefs, ...providers, fetch });
+  await server.loadMonth('2026-09');
+  assert.equal(urls.filter(u => u.includes('/scoreboard')).length, 0);
+  assert(urls.some(u => u.includes('/schedule')));
 });
 
 test('college team hubs use espnId and survive schedule failure', async () => {
