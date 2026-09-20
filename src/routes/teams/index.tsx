@@ -30,7 +30,7 @@ function TeamCard({ slug }: { slug: string }) {
           <p className="mt-0.5 truncate text-sm text-muted">{t.city} · {t.nick}</p>
         </div>
       </Link>
-      <FollowButton slug={t.slug} name={t.shortName} />
+      <FollowButton slug={t.slug} name={t.shortName} variant="icon" />
     </div>
   );
 }

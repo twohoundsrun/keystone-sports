@@ -7,7 +7,7 @@ import { PendingScreen } from "@/components/pending-screen";
 import { RouteError } from "@/components/route-error";
 
 import { getTodayBoard } from "@/lib/sports/api";
-import { applyView, sortFollowed } from "@/lib/sports/filter";
+import { applyView, hasPostedOdds, sortFollowed } from "@/lib/sports/filter";
 import { useFollows } from "@/lib/sports/follow-store";
 import { parseRegion, writePrefs } from "@/lib/sports/prefs";
 import { normalizeBookName } from "@/lib/sports/providers";
@@ -54,8 +54,8 @@ function OddsPage() {
     const focused = unique.filter((g) => g.odds || (lineSports.has(g.league) && g.dateKey <= cutoff));
     return sortFollowed(focused, followed);
   }, [board, region, followed, followHydrated]);
-  const postedLines = pool.filter((g) => Boolean(g.odds));
-  const awaitingLines = pool.filter((g) => !g.odds);
+  const postedLines = pool.filter((g) => hasPostedOdds(g));
+  const awaitingLines = pool.filter((g) => !hasPostedOdds(g));
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -101,7 +101,9 @@ function OddsPage() {
                 <tr key={g.id} className="border-t border-border">
                   <td className="px-4 py-3">
                     <p className="font-semibold">
-                      {g.away.abbr} @ {g.home.abbr}
+                      <Link to="/game" search={{ date: g.dateKey, id: g.id }} className="hover:text-accent">
+                        {g.away.abbr} @ {g.home.abbr}
+                      </Link>
                     </p>
                     <p className="text-xs text-muted">{g.league} · {(g.odds?.provider && normalizeBookName(g.odds.provider)) || "No line posted"}</p>
                   </td>
@@ -132,7 +134,9 @@ function OddsPage() {
             <article key={g.id} className="rounded-md bg-surface p-4 shadow-[var(--shadow-border)]">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted">{g.league} · {(g.odds?.provider && normalizeBookName(g.odds.provider)) || "No line posted"}</p>
               <p className="mt-1 font-display text-xl tracking-wide">
-                {g.away.abbr} @ {g.home.abbr}
+                <Link to="/game" search={{ date: g.dateKey, id: g.id }} className="hover:text-accent">
+                  {g.away.abbr} @ {g.home.abbr}
+                </Link>
               </p>
               <p className="text-xs text-muted">{formatKick(g.start)}</p>
               <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
