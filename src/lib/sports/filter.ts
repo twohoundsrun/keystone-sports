@@ -2,7 +2,14 @@ import { TEAMS, TEAM_BY_SLUG, type Region } from "@/data/teams";
 import type { ViewRegion } from "./prefs";
 import { addDays, dateKeyNY, formatKick, formatLongDate, formatShortDate } from "./time";
 import { similarHeadlines } from "./beat";
-import type { Game, NewsItem } from "./types";
+import type { Game, GameOdds, NewsItem } from "./types";
+
+export function hasPostedOdds(game: { odds?: GameOdds | null }): boolean {
+  const odds = game.odds;
+  if (!odds) return false;
+  const present = (value?: string) => Boolean(value && value.trim() && value.trim() !== "\u2014");
+  return present(odds.spread) || present(odds.total) || present(odds.homeMl) || present(odds.awayMl) || present(odds.drawMl) || present(odds.details);
+}
 
 export function isFollowedGame(game: Game, followed: string[]): boolean {
   if (!followed.length) return false;
@@ -93,7 +100,7 @@ export function humanKicker(input: {
     const clean = recap.body.replace(/\s+/g, " ").trim();
     const sentence = clean.match(/^.{24,200}?[.!?]/)?.[0]?.trim();
     const lede = sentence && sentence.toLowerCase() !== titled.toLowerCase() ? sentence : undefined;
-    return { line: `${formatShortDate(recap.date || input.date)} · ${titled}`, lede };
+    return { line: `${formatShortDate(recap.date || input.date)} \u00b7 ${titled}`, lede };
   }
   const weekday = formatLongDate(input.date).split(",")[0] || "Today";
   if (input.slateCount > 0) {
@@ -142,7 +149,7 @@ export function buildKicker(today: Game[], upcoming: Game[], recent: Game[]): st
       (final.away.slug && final.paSlugs.includes(final.away.slug) ? final.away : undefined) ??
       final.home;
     const opp = pa === final.home ? final.away : final.home;
-    parts.push(`${pa.abbr} ${pa.score}–${opp.score}`);
+    parts.push(`${pa.abbr} ${pa.score}\u2013${opp.score}`);
   }
   const next = upcoming.find((g) => g.status === "pre") ?? upcoming[0];
   if (next && next.status !== "post") {
@@ -155,7 +162,7 @@ export function matchupLine(game: Game): string {
   const pa = TEAM_BY_SLUG[game.paSlugs[0] ?? ""];
   if (!pa) return game.shortName;
   const homePa = game.home.slug === pa.slug;
-  if (game.status === "in") return `${pa.shortName} · ${game.statusText}`;
+  if (game.status === "in") return `${pa.shortName} \u00b7 ${game.statusText}`;
   if (homePa) return `${pa.shortName} host ${game.away.name}`;
   return `${pa.shortName} at ${game.home.name}`;
 }
