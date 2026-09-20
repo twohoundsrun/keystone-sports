@@ -53,10 +53,10 @@ export function DeskShell({ children }: { children: ReactNode }) {
     <div className="min-h-dvh bg-bg text-fg">
       <div className="sticky top-0 z-20">
         <ScoreTicker />
-        <header className="border-b border-border bg-bg/95 backdrop-blur-sm">
+        <header className="border-t-2 border-primary border-b border-border bg-bg/95 backdrop-blur-sm">
         <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-3 sm:gap-4 sm:px-6">
-          <Link to="/" className="flex h-11 shrink-0 items-center gap-2 sm:gap-2.5">
-            <KeystoneMark className="h-8 w-8 sm:h-9 sm:w-9" />
+          <Link to="/" className="group flex h-11 shrink-0 items-center gap-2 sm:gap-2.5">
+            <KeystoneMark className="h-8 w-8 transition-transform group-hover:scale-105 sm:h-9 sm:w-9" />
             <span className="leading-none">
               <span className="block font-display text-lg font-semibold tracking-widest sm:text-2xl">KEYSTONE BEAT</span>
               <span className="block text-[10px] font-semibold uppercase tracking-widest text-accent sm:text-xs">
@@ -64,6 +64,9 @@ export function DeskShell({ children }: { children: ReactNode }) {
               </span>
             </span>
           </Link>
+          <span className="hidden border-l border-border pl-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-subtle lg:block">
+            Philly · Pittsburgh · Colleges
+          </span>
           <nav className="hidden min-w-0 flex-1 items-center justify-end gap-1 md:flex">
             {NAV.map((item) => {
               const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
@@ -74,7 +77,7 @@ export function DeskShell({ children }: { children: ReactNode }) {
                   className={cn(
                     "inline-flex h-11 shrink-0 items-center px-3 text-sm font-semibold",
                     active
-                      ? "border-b-2 border-accent text-fg"
+                      ? "border-b-2 border-accent bg-accent-soft text-fg"
                       : "text-muted hover:text-fg",
                   )}
                 >
@@ -93,13 +96,16 @@ export function DeskShell({ children }: { children: ReactNode }) {
       <footer className="mt-12 border-t border-border bg-surface">
         <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
           <div className="flex flex-col gap-8 lg:flex-row lg:justify-between">
-            <div>
-              <p className="font-display text-2xl tracking-widest">KEYSTONE BEAT</p>
-              <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-accent">Pennsylvania Sports</p>
-              <p className="mt-1 max-w-sm text-sm text-muted">
-                A small Pennsylvania desk — Philly, Pittsburgh, and the colleges. Scores, lines, and the beat, written
-                like the sports page, not a dashboard.
-              </p>
+            <div className="flex items-start gap-3">
+              <KeystoneMark className="mt-0.5 h-8 w-8 shrink-0" />
+              <div>
+                <p className="font-display text-2xl tracking-widest">KEYSTONE BEAT</p>
+                <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-accent">Pennsylvania Sports</p>
+                <p className="mt-1 max-w-sm text-sm text-muted">
+                  A small Pennsylvania desk — Philly, Pittsburgh, and the colleges. Scores, lines, and the beat, written
+                  like the sports page, not a dashboard.
+                </p>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-x-10 gap-y-2 sm:grid-cols-3">
               {footerTeams.map((t) => (
