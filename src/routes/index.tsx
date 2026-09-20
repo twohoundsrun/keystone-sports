@@ -280,29 +280,59 @@ function TodayPage() {
             onSelect={(d) => patch({ date: d })}
           />
           {live.length ? (
-            <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+            <section className="mt-4 rounded-md border border-ok/30 bg-ok/5 p-3" aria-label="Live games">
+              <div className="mb-2 flex items-center gap-2">
+                <Badge variant="live">Live now</Badge>
+                <span className="text-xs font-semibold uppercase tracking-widest text-muted">
+                  {live.length} game{live.length === 1 ? "" : "s"} in progress
+                </span>
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-1">
               {live.map((g) => (
-                <div key={g.id} className="flex shrink-0 items-center gap-2 rounded-full bg-elevated px-3 py-2 text-sm">
-                  <Badge variant="live">Live</Badge>
-                  <span className="font-semibold">
-                    {g.away.abbr} {g.away.score} · {g.home.abbr} {g.home.score}
-                  </span>
+                <Link
+                  key={g.id}
+                  to="/game"
+                  search={{ date: g.dateKey, id: g.id }}
+                  className="flex shrink-0 items-center gap-2 rounded-full bg-elevated px-3 py-2 text-sm hover:bg-accent-soft"
+                >
+                  <span className="font-semibold">{g.away.abbr} {g.away.score} · {g.home.abbr} {g.home.score}</span>
                   <span className="text-muted">{g.statusText}</span>
-                </div>
+                </Link>
               ))}
-            </div>
+              </div>
+            </section>
           ) : null}
           {waitingFollows ? (
             <div className="mt-5 h-40 animate-pulse rounded-md bg-elevated" aria-hidden />
-          ) : feature ? (
-            <FadeSwap id={`feature-${date}-${feature.id}`}>
-              <div className="mt-5">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">
-                  {featuredLabel(feature)}
-                </p>
-                <GameCard game={feature} featured nextUp={feature.status === "pre" && isFollowedGame(feature, followed)} />
-              </div>
-            </FadeSwap>
+          ) : feature || lead ? (
+            <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
+              {feature ? (
+                <FadeSwap id={`feature-${date}-${feature.id}`}>
+                  <section aria-label="Now and next">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">{featuredLabel(feature)}</p>
+                    <GameCard game={feature} featured nextUp={feature.status === "pre" && isFollowedGame(feature, followed)} />
+                  </section>
+                </FadeSwap>
+              ) : null}
+              {lead ? (
+                <article className="border-t border-border pt-4 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-accent">Today&apos;s story</p>
+                  {lead.image ? (
+                    <a href={lead.href} target="_blank" rel="noreferrer" className="mt-3 block">
+                      <img src={lead.image} alt="" width={704} height={176} loading="lazy" decoding="async" className="h-36 w-full rounded-md object-cover" />
+                    </a>
+                  ) : null}
+                  <p className="mt-3 text-xs font-semibold uppercase tracking-wider text-muted">
+                    {TEAM_BY_SLUG[lead.teamSlug ?? ""]?.shortName ?? lead.league}
+                    {lead.published ? ` · ${relativeWhen(lead.published)}` : ""}
+                  </p>
+                  <a href={lead.href} target="_blank" rel="noreferrer" className="mt-1 block hover:text-accent">
+                    <h2 className="font-display text-2xl leading-tight tracking-wide">{lead.headline}</h2>
+                  </a>
+                  {lead.description ? <p className="mt-2 text-sm leading-relaxed text-muted">{lead.description}</p> : null}
+                </article>
+              ) : null}
+            </div>
           ) : null}
           <PublishedUpdates date={date} />
         </div>
@@ -313,6 +343,13 @@ function TodayPage() {
 
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.85fr)]">
         <div>
+          <div className="mb-3 flex items-baseline justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-accent">The daily board</p>
+              <h2 className="mt-1 font-display text-2xl tracking-wide">Today&apos;s slate</h2>
+            </div>
+            <span className="text-right text-xs text-muted">{games.length} game{games.length === 1 ? "" : "s"}</span>
+          </div>
           <FilterChips
             region={region}
             sport={sport}
@@ -374,34 +411,6 @@ function TodayPage() {
         </div>
 
         <aside className="space-y-6">
-          {lead ? (
-            <article>
-              {lead.image ? (
-                <a href={lead.href} target="_blank" rel="noreferrer" className="block">
-                  <img
-                    src={lead.image}
-                    alt=""
-                    width={704}
-                    height={176}
-                    loading="lazy"
-                    decoding="async"
-                    className="h-44 w-full rounded-md object-cover"
-                  />
-                </a>
-              ) : null}
-              <p className="mt-3 text-xs font-semibold uppercase tracking-wider text-muted">
-                {TEAM_BY_SLUG[lead.teamSlug ?? ""]?.shortName ?? lead.league}
-                {lead.published ? ` · ${relativeWhen(lead.published)}` : ""}
-              </p>
-              <a href={lead.href} target="_blank" rel="noreferrer" className="mt-1 block hover:text-accent">
-                <h2 className="font-display text-2xl leading-tight tracking-wide">{lead.headline}</h2>
-              </a>
-              {lead.description ? (
-                <p className="mt-2 text-sm leading-relaxed text-muted">{lead.description}</p>
-              ) : null}
-            </article>
-          ) : null}
-
           {moreNews.length ? (
             <section>
               <div className="mb-3 flex items-baseline justify-between">
