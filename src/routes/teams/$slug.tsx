@@ -93,13 +93,14 @@ function TeamPage() {
           {feedWarnings[0]} Club identity and links below still work.
         </div>
       ) : null}
-      <section className="border-b border-border bg-surface">
+      <section className="border-b border-border bg-surface" style={{ borderTop: `4px solid ${team.color}` }}>
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-5 px-4 py-8 sm:px-6">
-          <img data-logo src={teamLogo(team)} alt="" width={80} height={80} decoding="async" className="h-16 w-16 object-contain sm:h-20 sm:w-20" />
+          <div className="flex h-20 w-20 items-center justify-center rounded-md bg-elevated p-2 sm:h-24 sm:w-24">
+            <img data-logo src={teamLogo(team)} alt="" width={80} height={80} decoding="async" className="h-16 w-16 object-contain sm:h-20 sm:w-20" />
+          </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-              {team.league} · {team.city}
-            </p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-accent">Team hub</p>
+            <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-muted">{team.league} · {team.sport} · {team.city}</p>
             <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">{team.name}</h1>
             <p className="mt-1 text-muted">{team.nick}</p>
             <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
@@ -139,8 +140,10 @@ function TeamPage() {
         </div>
         {next ? (
           <div className="mx-auto max-w-6xl border-t border-border px-4 py-3 text-sm sm:px-6">
-            <span className="font-semibold">Next: </span>
-            {next.away.abbr} @ {next.home.abbr}
+            <span className="font-semibold">Next up: </span>
+            <Link to="/game" search={{ date: next.dateKey, id: next.id }} className="font-semibold hover:text-accent">
+              {next.away.abbr} @ {next.home.abbr}
+            </Link>
             {next.status === "in" ? (
               <span className="ml-2 font-semibold text-accent">Live · {next.statusText}</span>
             ) : (
