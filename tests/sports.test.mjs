@@ -69,7 +69,8 @@ test('historical board fetches the requested date rather than filtering the pres
   assert(dateParams.includes('20200101'));
   assert(dateParams.every(p => !p.includes('-')));
   assert.equal(board.games[0].dateKey, '2020-01-01'); assert.equal(board.games[0].home.score, '21');
-  assert.equal(server.parseEspnEvent({ ...fixture, status: { type: { state: 'pre', shortDetail: 'Postponed' } } }, 'nfl').statusText, 'Postponed');
+  assert(server.parseEspnEvent({ ...fixture, status: { type: { state: 'pre', shortDetail: 'Postponed' } } }, 'nfl').statusText, 'Postponed');
+  assert.equal(server.parseEspnEvent({ ...fixture, id: '"401872939"' }, 'nfl').id, '401872939');
 });
 
 test('loadToday uses single-day ESPN scoreboards and schedule fallbacks', async () => {

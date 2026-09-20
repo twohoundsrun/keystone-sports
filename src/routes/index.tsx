@@ -446,10 +446,16 @@ function TodayPage() {
             <p className="mt-2 text-sm text-muted">
               An AI-assisted recap from dated scores and headlines. Check the sources before sharing.
             </p>
-            <Button className="mt-4 w-full" onClick={() => void runBrief()} disabled={busy || !aiAccess.aiEnabled || !aiAccess.signedIn}>
-              <PenLine className="h-4 w-4" />
-              {busy ? "Writing…" : !aiAccess.aiEnabled ? "Recaps not enabled yet" : "Write the recap"}
-            </Button>
+            {aiAccess.aiEnabled ? (
+              <Button className="mt-4 w-full" onClick={() => void runBrief()} disabled={busy || !aiAccess.signedIn}>
+                <PenLine className="h-4 w-4" />
+                {busy ? "Writing…" : !aiAccess.signedIn ? "Sign in to write the recap" : "Write the recap"}
+              </Button>
+            ) : (
+              <p className="mt-4 border-t border-border pt-4 text-sm text-muted">
+                The recap desk is currently unavailable. Browse the source-linked headlines above for today&apos;s context.
+              </p>
+            )}
             {briefError ? <p className="mt-3 text-sm text-danger">{briefError}</p> : null}
             {brief ? (
               <div className="mt-4 space-y-3 border-t border-border pt-4 text-sm leading-relaxed text-fg">

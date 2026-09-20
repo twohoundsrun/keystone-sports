@@ -147,6 +147,10 @@ function str(v: unknown): string {
   if (typeof v === "number" && Number.isFinite(v)) return String(v);
   return "";
 }
+function gameId(v: unknown): string {
+  const value = str(v).trim();
+  return value.length >= 2 && value.startsWith('"') && value.endsWith('"') ? value.slice(1, -1) : value;
+}
 
 function scoreOf(competitor: Record<string, unknown>): string | undefined {
   const s = competitor.score;
@@ -365,7 +369,7 @@ export function parseEspnEvent(event: unknown, espnLeague: string): Game | null 
   const meta = sportMeta(espnLeague);
   const venue = str(rec(comp.venue)?.fullName) || str(rec(e.venue)?.fullName) || undefined;
   return {
-    id: str(e.id) || `${espnLeague}-${start}-${away.abbr}-${home.abbr}`,
+    id: gameId(e.id) || `${espnLeague}-${start}-${away.abbr}-${home.abbr}`,
     gameNumber: Number(comp.gameNumber) || undefined,
     sourceUrl: ensureEspnHttps(str(rec(arr(e.links)[0])?.href) || undefined),
     start,
@@ -1024,7 +1028,8 @@ export async function writeBrief(input: BriefInput): Promise<{ ok: true; text: s
 
 export async function loadGameDetail(date: string, id: string) {
   const board = await loadToday(date);
-  const game = [...board.games, ...board.upcoming, ...board.recent].find(g => g.id === id) ?? null;
+  const normalizedId = gameId(id);
+  const game = [...board.games, ...board.upcoming, ...board.recent].find(g => g.id === normalizedId || g.id === id) ?? null;
   const lines: Array<{ label: string; away: string; home: string }> = [];
   const players: string[] = [];
   let warning = board.warnings?.join(' · ') || '';
