@@ -54,10 +54,13 @@ function OddsPage() {
     const focused = unique.filter((g) => g.odds || (lineSports.has(g.league) && g.dateKey <= cutoff));
     return sortFollowed(focused, followed);
   }, [board, region, followed, followHydrated]);
+  const postedLines = pool.filter((g) => Boolean(g.odds));
+  const awaitingLines = pool.filter((g) => !g.odds);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">Odds</h1>
+        <p className="text-xs font-semibold uppercase tracking-widest text-accent">Information desk</p>
+        <h1 className="mt-1 font-display text-4xl font-semibold tracking-tight sm:text-5xl">Odds</h1>
         <p className="mt-3 max-w-2xl text-muted">
           Spreads, totals, and moneylines next to the games — not a sportsbook. Numbers come from ESPN's public
           board. 21+.
@@ -74,7 +77,14 @@ function OddsPage() {
           />
         </div>
 
-        <div className="mt-8 hidden overflow-x-auto rounded-md bg-surface shadow-[var(--shadow-border)] md:block">
+        <div className="mt-8 flex flex-wrap items-baseline justify-between gap-2">
+          <div>
+            <h2 className="font-display text-2xl tracking-wide">Posted lines</h2>
+            <p className="mt-1 text-sm text-muted">Current numbers for upcoming Pennsylvania games.</p>
+          </div>
+          <span className="text-xs font-semibold uppercase tracking-wider text-accent">{postedLines.length} posted</span>
+        </div>
+        <div className="mt-4 hidden overflow-x-auto rounded-md bg-surface shadow-[var(--shadow-border)] md:block">
           <table className="w-full min-w-[640px] text-left text-sm">
             <thead className="bg-elevated text-xs font-semibold uppercase tracking-wider text-muted">
               <tr>
@@ -87,7 +97,7 @@ function OddsPage() {
               </tr>
             </thead>
             <tbody>
-              {pool.map((g) => (
+              {postedLines.map((g) => (
                 <tr key={g.id} className="border-t border-border">
                   <td className="px-4 py-3">
                     <p className="font-semibold">
@@ -102,7 +112,7 @@ function OddsPage() {
                   <td className="px-4 py-3 tabular-nums">{g.odds?.homeMl ?? "—"}</td>
                 </tr>
               ))}
-              {pool.length === 0 ? (
+              {postedLines.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-10 text-center text-muted">
                     {region === "following" && followHydrated && !followed.length
@@ -118,7 +128,7 @@ function OddsPage() {
         </div>
 
         <div className="mt-6 space-y-3 md:hidden">
-          {pool.map((g) => (
+          {postedLines.map((g) => (
             <article key={g.id} className="rounded-md bg-surface p-4 shadow-[var(--shadow-border)]">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted">{g.league} · {(g.odds?.provider && normalizeBookName(g.odds.provider)) || "No line posted"}</p>
               <p className="mt-1 font-display text-xl tracking-wide">
@@ -145,7 +155,7 @@ function OddsPage() {
               </dl>
             </article>
           ))}
-          {pool.length === 0 ? (
+          {postedLines.length === 0 ? (
             <p className="py-10 text-center text-muted">
               {region === "following" && followHydrated && !followed.length
                 ? "Star a club first — then lines for those games show up here."
@@ -155,6 +165,30 @@ function OddsPage() {
             </p>
           ) : null}
         </div>
+        {awaitingLines.length ? (
+          <section className="mt-8" aria-label="Games awaiting odds">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <div>
+                <h2 className="font-display text-2xl tracking-wide">Coming up, lines pending</h2>
+                <p className="mt-1 text-sm text-muted">Scheduled games stay visible until a public number is posted.</p>
+              </div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted">{awaitingLines.length} pending</span>
+            </div>
+            <div className="mt-4 divide-y divide-border rounded-md bg-surface px-4 shadow-[var(--shadow-border)]">
+              {awaitingLines.map((g) => (
+                <Link
+                  key={g.id}
+                  to="/game"
+                  search={{ date: g.dateKey, id: g.id }}
+                  className="flex items-center justify-between gap-4 py-3 text-sm hover:text-accent"
+                >
+                  <span className="min-w-0 truncate font-semibold">{g.away.abbr} @ {g.home.abbr}</span>
+                  <span className="shrink-0 text-xs text-muted">{formatKick(g.start)} · Not posted</span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ) : null}
         <p className="mt-4 text-xs text-subtle">
           Lines are from ESPN’s public board; the supplied provider is shown per game. Games farther out — especially later MLB dates — may
           not have a number yet. Not an offer to bet.
