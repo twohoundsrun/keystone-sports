@@ -10,7 +10,8 @@ function moduleFunctions(path, names, deps = {}) {
 }
 
 test('hasPostedOdds requires a real market number, not an empty odds object', () => {
-  const { hasPostedOdds } = moduleFunctions('src/lib/sports/filter.ts', ['hasPostedOdds']);
+  const teams = moduleFunctions('src/data/teams.ts', ['TEAMS', 'TEAM_BY_SLUG']);
+  const { hasPostedOdds } = moduleFunctions('src/lib/sports/filter.ts', ['hasPostedOdds'], teams);
   assert.equal(hasPostedOdds({}), false);
   assert.equal(hasPostedOdds({ odds: { provider: 'ESPN' } }), false);
   assert.equal(hasPostedOdds({ odds: { provider: 'ESPN', spread: '—' } }), false);
