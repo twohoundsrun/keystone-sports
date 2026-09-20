@@ -10,6 +10,9 @@
   --ks-navy-800: #121826;
   --ks-navy-700: #1a2233;
 
+  /* The ticker stays dark in every theme, so its foreground must stay light. */
+  --ks-scoreboard-fg: #e6edf4;
+
   --ks-bg: var(--ks-navy-900);
   --ks-surface: var(--ks-navy-800);
   --ks-elevated: var(--ks-navy-700);
@@ -147,7 +150,7 @@
   --color-accent-soft: var(--ks-accent-soft);
 
   --color-scoreboard: var(--ks-navy-950);
-  --color-scoreboard-fg: var(--ks-fg);
+  --color-scoreboard-fg: var(--ks-scoreboard-fg);
 
   --color-border: var(--ks-border);
   --color-border-strong: var(--ks-border-strong);
