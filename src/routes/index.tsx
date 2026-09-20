@@ -239,7 +239,12 @@ function TodayPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
       <section className="home-summary border-b border-border bg-surface">
         <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-5">
-          <p className="text-xs font-semibold uppercase tracking-widest text-accent">Pennsylvania</p>
+          <div className="max-w-3xl border-l-2 border-accent pl-3 sm:pl-4" aria-label="Keystone Beat mission">
+            <p className="text-xs font-semibold uppercase tracking-widest text-accent">The Pennsylvania sports page</p>
+            <p className="mt-1 font-display text-xl leading-tight tracking-wide sm:text-2xl">
+              Philly, Pittsburgh, and the colleges — scores, lines, and the day&apos;s biggest stories in one place.
+            </p>
+          </div>
           <div className="mt-1 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
             <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
               {formatLongDate(date)}
