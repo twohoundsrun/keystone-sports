@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { Badge } from "@/components/ui/badge";
 import { TEAM_BY_SLUG } from "@/data/teams";
 import { SOURCE_TIER_LABELS, type BeatCategory, type PublicBeatItem } from "@/lib/beat/types";
+import { formatAttribution } from "@/lib/beat/attribution";
 import { relativeWhen } from "@/lib/sports/time";
 import { BeatErrorBoundary } from "./beat-boundaries";
 
@@ -26,7 +27,7 @@ function CardFallback({ item }: { item: PublicBeatItem }) {
         rel="noreferrer"
         className="mt-3 inline-block text-sm font-semibold text-accent hover:underline"
       >
-        Open original · {item.source}
+        Open original · {formatAttribution(item.source)}
       </a>
     </div>
   );
@@ -60,10 +61,7 @@ function BeatCardInner({ item }: { item: PublicBeatItem }) {
       {item.context ? <p className="mt-2 text-sm leading-relaxed text-muted">{item.context}</p> : null}
 
       <p className="mt-3 text-xs text-subtle">
-        {item.source}
-        {item.authorAccount ? ` · ${item.authorAccount}` : ""}
-        {team ? ` · ${team.shortName}` : item.league ? ` · ${item.league}` : ""}
-        {item.timestamp ? ` · ${relativeWhen(item.timestamp)}` : ""}
+        {formatAttribution(item.source, item.authorAccount, team?.shortName ?? item.league, item.timestamp ? relativeWhen(item.timestamp) : undefined)}
       </p>
 
       <Suspense fallback={<p className="mt-3 text-sm text-muted">Preparing media…</p>}>

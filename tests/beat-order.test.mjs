@@ -18,6 +18,7 @@ const order = moduleFunctions('src/lib/beat/order.ts', [
   'toPublicBeatItem',
 ]);
 const flag = moduleFunctions('src/lib/beat/flag.ts', ['isBeatM1Enabled', 'readBeatM1Flag', 'BEAT_M1_FLAG']);
+const attribution = moduleFunctions('src/lib/beat/attribution.ts', ['distinctAttributionParts', 'formatAttribution']);
 const fixtures = JSON.parse(readFileSync('src/data/beat-poc.json', 'utf8'));
 
 test('editorial buckets follow Breaking → original → official watch → watch → locker → reaction', () => {
@@ -73,6 +74,11 @@ test('fixture inventory covers all categories and media types', () => {
   for (const c of ['breaking', 'from_the_beat', 'watch', 'locker_room', 'reaction']) assert.ok(cats.has(c), c);
   for (const m of ['x_embed', 'youtube_embed', 'link_out']) assert.ok(media.has(m), m);
   assert.equal(fixtures.length, 8);
+});
+
+test('attribution removes duplicate source and author labels without losing distinct values', () => {
+  assert.equal(attribution.formatAttribution('The Philadelphia Inquirer', 'the philadelphia inquirer', '76ers', '2d ago'), 'The Philadelphia Inquirer · 76ers · 2d ago');
+  assert.deepEqual(attribution.distinctAttributionParts('  AP  ', '', 'AP', 'Pirates'), ['AP', 'Pirates']);
 });
 
 test('KEYSTONE_BEAT_M1 flag defaults off and accepts true/1', () => {

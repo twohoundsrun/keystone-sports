@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Badge } from "@/components/ui/badge";
 import { TEAM_BY_SLUG } from "@/data/teams";
 import { BEAT_CATEGORY_LABELS, type PublicBeatItem } from "@/lib/beat/types";
+import { formatAttribution } from "@/lib/beat/attribution";
 import type { NewsItem } from "@/lib/sports/types";
 import { relativeWhen } from "@/lib/sports/time";
 import { cn } from "@/lib/utils";
@@ -30,10 +31,7 @@ export function BreakingAlert({ item }: { item: PublicBeatItem }) {
       </a>
       {item.context ? <p className="mt-3 max-w-3xl text-t3 text-muted">{item.context}</p> : null}
       <p className="mt-3 text-t1 text-subtle">
-        {item.source}
-        {item.authorAccount ? ` · ${item.authorAccount}` : ""}
-        {team ? ` · ${team.shortName}` : item.league ? ` · ${item.league}` : ""}
-        {item.timestamp ? ` · ${relativeWhen(item.timestamp)}` : ""}
+        {formatAttribution(item.source, item.authorAccount, team?.shortName ?? item.league, item.timestamp ? relativeWhen(item.timestamp) : undefined)}
       </p>
     </article>
   );
