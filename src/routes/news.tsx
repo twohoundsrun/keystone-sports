@@ -3,7 +3,8 @@ import { PendingScreen } from "@/components/pending-screen";
 import { RouteError } from "@/components/route-error";
 import { BeatModule } from "@/components/beat/beat-module";
 import { PublishedReports } from "@/components/published-reports";
-import { BreakingAlert, DeskArticle, LockerRoom, WireList, isPremiumBeat } from "@/components/news-feed";
+import { BreakingAlert, DeskArticle, LockerRoom, WireList } from "@/components/news-feed";
+import { isPremiumBeat } from "@/components/news-feed-utils";
 
 import { getNewsWire } from "@/lib/sports/api";
 import { getBeatDesk } from "@/lib/beat/api";

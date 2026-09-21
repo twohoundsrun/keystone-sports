@@ -7,10 +7,6 @@ import type { NewsItem } from "@/lib/sports/types";
 import { relativeWhen } from "@/lib/sports/time";
 import { cn } from "@/lib/utils";
 
-export function isPremiumBeat(item: PublicBeatItem): boolean {
-  return Boolean(item.pinned) || item.category === "breaking";
-}
-
 export function BreakingAlert({ item }: { item: PublicBeatItem }) {
   const team = item.teamSlug ? TEAM_BY_SLUG[item.teamSlug] : undefined;
   return (
