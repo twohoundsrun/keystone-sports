@@ -130,6 +130,7 @@ function TodayPage() {
   );
   const live = games.filter((g) => g.status === "in");
   const feature = pickFeatured(games, followed, upcomingAll);
+  const liveStrip = live.filter((g) => g.id !== feature?.id);
   const rest = games.filter((g) => g.id !== feature?.id);
   const upcoming = upcomingAll.filter((g) => g.id !== feature?.id).slice(0, 8);
   const recap = (loader.posts ?? []).find((p) => p.kind === "recap") ?? null;
@@ -239,16 +240,13 @@ function TodayPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
       <section className="home-summary border-b border-border bg-surface">
         <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-5">
-          <div className="max-w-3xl border-l-2 border-accent pl-3 sm:pl-4" aria-label="Keystone Beat mission">
-            <p className="text-xs font-semibold uppercase tracking-widest text-accent">The Pennsylvania sports page</p>
-            <p className="mt-1 font-display text-xl leading-tight tracking-wide sm:text-2xl">
-              Philly, Pittsburgh, and the colleges — scores, lines, and the day&apos;s biggest stories in one place.
-            </p>
-          </div>
-          <div className="mt-1 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-            <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-              {formatLongDate(date)}
-            </h1>
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-accent">Pennsylvania sports desk</p>
+              <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+                {formatLongDate(date)}
+              </h1>
+            </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => patch({ date: addDays(date, -1) })}>
                 Prev
@@ -284,8 +282,8 @@ function TodayPage() {
             liveDays={liveDays}
             onSelect={(d) => patch({ date: d })}
           />
-          {live.length ? (
-            <section className="mt-4 rounded-md border border-ok/30 bg-ok/5 p-3" aria-label="Live games">
+          {liveStrip.length ? (
+            <section className="mt-4 rounded-md border border-ok/30 bg-ok/5 p-3" aria-label="Other live games">
               <div className="mb-2 flex items-center gap-2">
                 <Badge variant="live">Live now</Badge>
                 <span className="text-xs font-semibold uppercase tracking-widest text-muted">
@@ -293,7 +291,7 @@ function TodayPage() {
                 </span>
               </div>
               <div className="flex gap-2 overflow-x-auto pb-1">
-              {live.map((g) => (
+              {liveStrip.map((g) => (
                 <Link
                   key={g.id}
                   to="/game"
@@ -329,7 +327,7 @@ function TodayPage() {
                   ) : null}
                   <p className="mt-3 text-xs font-semibold uppercase tracking-wider text-muted">
                     {TEAM_BY_SLUG[lead.teamSlug ?? ""]?.shortName ?? lead.league}
-                    {lead.published ? ` · ${relativeWhen(lead.published)}` : ""}
+                    {lead.published ? ` \u00b7 ${relativeWhen(lead.published)}` : ""}
                   </p>
                   <a href={lead.href} target="_blank" rel="noreferrer" className="mt-1 block hover:text-accent">
                     <h2 className="font-display text-2xl leading-tight tracking-wide">{lead.headline}</h2>
@@ -431,7 +429,7 @@ function TodayPage() {
                       <p className="text-sm font-semibold leading-snug group-hover:text-accent">{a.headline}</p>
                       <p className="mt-1 text-xs uppercase tracking-wider text-subtle">
                         {TEAM_BY_SLUG[a.teamSlug ?? ""]?.shortName ?? a.league}
-                        {a.published ? ` · ${relativeWhen(a.published)}` : ""}
+                        {a.published ? ` \u00b7 ${relativeWhen(a.published)}` : ""}
                       </p>
                     </a>
                   </li>

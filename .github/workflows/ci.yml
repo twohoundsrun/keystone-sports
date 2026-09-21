@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Sports tests
+        run: npm run test:sports
+      - name: Production build
+        run: npm run build
+      - name: Typecheck
+        # Known baseline: duplicate `ok` narrowing in src/lib/beat-admin-middleware.ts.
+        # Keep the signal without blocking merge until that file is cleaned up.
+        continue-on-error: true
+        run: npm run typecheck

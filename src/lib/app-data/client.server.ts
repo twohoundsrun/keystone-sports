@@ -211,7 +211,9 @@ function tokenIdentityKey(token: string): string {
             .digest("base64url");
         }
       }
-    } catch {}
+    } catch {
+      // Ignore malformed JWT payloads and hash the raw token instead.
+    }
   }
   return createHash("sha256").update(token).digest("base64url");
 }
