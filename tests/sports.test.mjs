@@ -107,7 +107,7 @@ test('week odds supplement never sends an ESPN date range', async () => {
   assert(scoreboardUrls.every(u => !new URL(u).searchParams.get('dates').includes('-')));
 });
 
-test('calendar month uses PA schedules instead of ESPN range scoreboards', async () => {
+test('calendar month uses PA schedules and a single-day scoreboard for the current month', async () => {
   const urls = [];
   const fetch = async url => {
     urls.push(String(url));
@@ -117,7 +117,9 @@ test('calendar month uses PA schedules instead of ESPN range scoreboards', async
   };
   const server = moduleFunctions('src/lib/sports/server.ts', ['loadMonth'], { SportsCache, ...identity, ...time, ...teams, ...briefs, ...providers, fetch });
   await server.loadMonth('2026-09');
-  assert.equal(urls.filter(u => u.includes('/scoreboard')).length, 0);
+  const scoreboardUrls = urls.filter(u => u.includes('/scoreboard'));
+  assert(scoreboardUrls.length > 0);
+  assert(scoreboardUrls.every(u => !new URL(u).searchParams.get('dates').includes('-')));
   assert(urls.some(u => u.includes('/schedule')));
 });
 

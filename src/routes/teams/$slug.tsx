@@ -13,6 +13,7 @@ import type { Post } from "@/lib/publishing/types";
 import type { TeamPageData } from "@/lib/sports/types";
 import { dateKeyNY, formatKick, relativeWhen, untilWhen } from "@/lib/sports/time";
 import { cn } from "@/lib/utils";
+import { socialMeta } from "@/lib/seo";
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -63,15 +64,14 @@ export const Route = createFileRoute("/teams/$slug")({
   staleTime: 20_000,
   pendingComponent: PendingScreen,
   errorComponent: RouteError,
-  head: ({ loaderData }) => ({
-    meta: [
-      {
-        title: loaderData?.team
-          ? `${loaderData.team.name} — Keystone Beat`
-          : "Team — Keystone Beat",
-      },
-    ],
-  }),
+  head: ({ loaderData }) => {
+    const team = loaderData?.team;
+    return socialMeta({
+      title: team ? `${team.name} — Keystone Beat` : "Pennsylvania team hub — Keystone Beat",
+      description: team ? `${team.name} ${team.league} schedule, scores, news, standings, and team updates from Keystone Beat.` : "Pennsylvania team schedules, scores, and news from Keystone Beat.",
+      path: team ? `/teams/${team.slug}` : "/teams",
+    });
+  },
   component: TeamPage,
 });
 

@@ -25,6 +25,7 @@ import { parseRegion, readPrefs, writePrefs } from "@/lib/sports/prefs";
 import { addDays, dateKeyNY, formatKick, formatLongDate, relativeWhen } from "@/lib/sports/time";
 import type { NewsItem } from "@/lib/sports/types";
 import { cn } from "@/lib/utils";
+import { socialMeta } from "@/lib/seo";
 
 type Search = { date?: string; region?: string; sport?: string };
 
@@ -46,15 +47,9 @@ export const Route = createFileRoute("/")({
   staleTime: 20_000,
   pendingComponent: PendingScreen,
   errorComponent: RouteError,
-  head: () => ({
-    meta: [
-      { title: "Scores — Keystone Beat" },
-      {
-        name: "description",
-        content:
-          "Live Pennsylvania sports scores: Eagles, Steelers, Phillies, Pirates, Sixers, Flyers, Penguins, Union, Penn State, Pitt, Temple, Villanova.",
-      },
-    ],
+  head: () => socialMeta({
+    title: "Pennsylvania sports scores — Keystone Beat",
+    description: "Live Pennsylvania sports scores: Eagles, Steelers, Phillies, Pirates, Sixers, Flyers, Penguins, Union, Penn State, Pitt, Temple, Villanova.",
   }),
   component: TodayPage,
 });

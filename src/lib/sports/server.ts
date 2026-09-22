@@ -741,12 +741,16 @@ export async function loadMonth(month?: string) {
     const { start, end } = monthBounds(m);
     // Team schedules are a better fit for a PA-only calendar and avoid ESPN's
     // broken month-sized scoreboard range request entirely.
-    const [mlb, schedules] = await Promise.all([
+    const currentDay = dateKeyNY();
+    const [mlb, schedules, todayScores] = await Promise.all([
       safeMlb(start, end),
       timed(espnSchedulesForPa(), 10_000, [] as Game[]),
+      m === currentDay.slice(0, 7) ? scoreboardDate(currentDay) : Promise.resolve({ games: [] as Game[], warnings: [] as string[] }),
     ]);
-    const games = mergeGames(mlb.games, schedules).filter(g => g.dateKey >= start && g.dateKey <= end).sort(byStart);
-    return { month: m, games, ...freshness(games, mlb.warnings) };
+    const games = mergeGames(todayScores.games, mergeGames(mlb.games, schedules))
+      .filter(g => g.dateKey >= start && g.dateKey <= end)
+      .sort(byStart);
+    return { month: m, games, ...freshness(games, [...mlb.warnings, ...todayScores.warnings]) };
   }, 10 * 60_000);
 }
 

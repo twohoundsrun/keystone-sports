@@ -2,6 +2,7 @@ import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-r
 import { AuthProvider } from "@/lib/auth/provider";
 import { DeskShell } from "@/components/desk-shell";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
+import { DEFAULT_DESCRIPTION, DEFAULT_OG_IMAGE, SITE_URL } from "@/lib/seo";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "Keystone Beat";
@@ -28,9 +29,20 @@ export const Route = createRootRoute({
       { title: `${APP_NAME} — Pennsylvania sports` },
       {
         name: "description",
-        content:
-          "Daily Pennsylvania sports: Philly and Pittsburgh scores, calendars, lines, news, and an editor for your own notes.",
+        content: DEFAULT_DESCRIPTION,
       },
+      { name: "robots", content: "index,follow" },
+      { property: "og:type", content: "website" },
+      { property: "og:site_name", content: APP_NAME },
+      { property: "og:title", content: `${APP_NAME} — Pennsylvania sports` },
+      { property: "og:description", content: DEFAULT_DESCRIPTION },
+      { property: "og:url", content: SITE_URL },
+      { property: "og:image", content: DEFAULT_OG_IMAGE },
+      { property: "og:image:alt", content: "Keystone Beat Pennsylvania sports" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: `${APP_NAME} — Pennsylvania sports` },
+      { name: "twitter:description", content: DEFAULT_DESCRIPTION },
+      { name: "twitter:image", content: DEFAULT_OG_IMAGE },
       { name: "theme-color", content: "#0a0e16" },
     ],
     links: [
@@ -39,6 +51,7 @@ export const Route = createRootRoute({
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: import.meta.env.VITE_STANDALONE === "true" ? "/manifest.webmanifest" : "/__grok/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/brand/two-hounds-mark.png" },
+      { rel: "canonical", href: SITE_URL },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {

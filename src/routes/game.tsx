@@ -4,6 +4,7 @@ import { DataEmptyState } from "@/components/data-empty-state";
 import { FeedStatus } from "@/components/feed-status";
 import { GameCard } from "@/components/game-card";
 import { getGameDetail } from "@/lib/sports/api";
+import { socialMeta } from "@/lib/seo";
 
 export const Route = createFileRoute("/game")({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -12,7 +13,15 @@ export const Route = createFileRoute("/game")({
   }),
   loaderDeps: ({ search }) => search,
   loader: ({ deps }) => getGameDetail({ data: deps }),
-  head: () => ({ meta: [{ title: "Game details — Keystone Beat" }] }),
+  head: ({ loaderData }) => {
+    const game = loaderData?.game;
+    const title = game ? `${game.away.abbr} at ${game.home.abbr} — Keystone Beat` : "Game details — Keystone Beat";
+    const description = game
+      ? `${game.name}: ${game.status === "pre" ? `scheduled for ${game.start}` : game.statusText || "score and game details"}. Pennsylvania sports coverage from Keystone Beat.`
+      : "Pennsylvania game scores, schedules, and source-linked details from Keystone Beat.";
+    const path = game ? `/game?date=${encodeURIComponent(game.dateKey)}&id=${encodeURIComponent(game.id)}` : "/game";
+    return socialMeta({ title, description, path });
+  },
   component: GamePage,
 });
 
