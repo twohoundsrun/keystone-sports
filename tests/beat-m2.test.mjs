@@ -17,6 +17,7 @@ const allow = load('src/lib/beat/allowlist.ts', [
   'extractYouTubeId',
   'normalizeBeatUrl',
 ]);
+const sanitizer = load('src/lib/beat/sanitize-oembed.ts', ['sanitizeXOembedHtml']);
 const fp = load(
   'src/lib/beat/fingerprint.ts',
   ['beatDuplicateFingerprint', 'urlsLikelySameStory'],
@@ -54,6 +55,26 @@ test('classifyBeatMedia maps X and YouTube; else link_out', () => {
   assert.match(yt.embedUrl, /youtube-nocookie/);
   const link = allow.classifyBeatMedia('https://www.inquirer.com/eagles/example');
   assert.equal(link.mediaType, 'link_out');
+});
+
+test('X oEmbed sanitizer keeps the allowlist and strips active HTML', () => {
+  const sanitized = sanitizer.sanitizeXOembedHtml(
+    '<blockquote class="twitter-tweet evil" data-dnt="true" onclick="alert(1)"><p lang="en" dir="ltr">Safe post</p><script>alert(1)</script><a href="javascript:alert(2)" target="_blank" style="color:red">Open</a><iframe src="https://evil.example"></iframe></blockquote>',
+  );
+  assert.match(sanitized, /<blockquote class="twitter-tweet" data-dnt="true">/);
+  assert.match(sanitized, /<p lang="en" dir="ltr">Safe post<\/p>/);
+  assert.match(sanitized, /<a target="_blank">Open<\/a>/);
+  assert.doesNotMatch(sanitized, /script|iframe|onclick|style|javascript|evil/);
+});
+
+test('X oEmbed sanitizer preserves only HTTPS links and safe attributes', () => {
+  const sanitized = sanitizer.sanitizeXOembedHtml(
+    '<p class="twitter-tweet-rendered" lang="en-US"><a href="https://x.com/Eagles/status/123" rel="noopener noreferrer">View on X</a></p>',
+  );
+  assert.equal(
+    sanitized,
+    '<p class="twitter-tweet-rendered" lang="en-US"><a href="https://x.com/Eagles/status/123" rel="noopener noreferrer">View on X</a></p>',
+  );
 });
 
 test('fingerprints prefer provider ids and dedupe URLs', () => {

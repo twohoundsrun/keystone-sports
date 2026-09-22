@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { PublicBeatItem } from "@/lib/beat/types";
+import { sanitizeXOembedHtml } from "@/lib/beat/sanitize-oembed";
 
 declare global {
   interface Window {
@@ -131,7 +132,7 @@ export function BeatEmbed({ item }: Props) {
         {active && item.oembedHtml ? (
           <div
             className="beat-x-embed text-sm [&_blockquote]:m-0"
-            dangerouslySetInnerHTML={{ __html: item.oembedHtml }}
+            dangerouslySetInnerHTML={{ __html: sanitizeXOembedHtml(item.oembedHtml) }}
           />
         ) : active ? (
           <p className="text-sm text-muted">
