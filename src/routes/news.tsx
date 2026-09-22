@@ -10,6 +10,7 @@ import { getNewsWire } from "@/lib/sports/api";
 import { getBeatDesk } from "@/lib/beat/api";
 import { rankPaNews } from "@/lib/sports/filter";
 import { useFollows } from "@/lib/sports/follow-store";
+import { socialMeta } from "@/lib/seo";
 
 export const Route = createFileRoute("/news")({
   loader: async () => {
@@ -19,8 +20,10 @@ export const Route = createFileRoute("/news")({
   staleTime: 60_000,
   pendingComponent: PendingScreen,
   errorComponent: RouteError,
-  head: () => ({
-    meta: [{ title: "News — Keystone Beat" }],
+  head: () => socialMeta({
+    title: "Pennsylvania sports news — Keystone Beat",
+    description: "Source-linked Pennsylvania sports news, Beat desk context, official highlights, and local coverage for Philly and Pittsburgh teams.",
+    path: "/news",
   }),
   component: NewsPage,
 });

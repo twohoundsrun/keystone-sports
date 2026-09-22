@@ -19,6 +19,7 @@ import { useFollows } from "@/lib/sports/follow-store";
 import { applyView } from "@/lib/sports/filter";
 import { parseRegion, writePrefs } from "@/lib/sports/prefs";
 import { dateKeyNY, formatLongDate, shiftMonth } from "@/lib/sports/time";
+import { socialMeta } from "@/lib/seo";
 
 type Search = { month?: string; region?: string; sport?: string; day?: string };
 
@@ -34,8 +35,10 @@ export const Route = createFileRoute("/calendar")({
   staleTime: 30_000,
   pendingComponent: PendingScreen,
   errorComponent: RouteError,
-  head: () => ({
-    meta: [{ title: "Calendar — Keystone Beat" }],
+  head: () => socialMeta({
+    title: "Pennsylvania sports calendar — Keystone Beat",
+    description: "Browse Pennsylvania team schedules by month, day, sport, and followed club.",
+    path: "/calendar",
   }),
   component: CalendarPage,
 });
@@ -77,14 +80,14 @@ function CalendarPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">Calendar</h1>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => patch({ month: shiftMonth(month, -1) })}>
-              <ChevronLeft aria-label="Previous month" className="h-4 w-4" />
+            <Button aria-label="Previous month" variant="outline" size="sm" onClick={() => patch({ month: shiftMonth(month, -1) })}>
+              <ChevronLeft aria-hidden className="h-4 w-4" />
             </Button>
             <p className="min-w-28 text-center font-display text-xl tracking-wide">
               {new Date(`${month}-02T12:00:00`).toLocaleString("en-US", { month: "long", year: "numeric" })}
             </p>
-            <Button variant="outline" size="sm" onClick={() => patch({ month: shiftMonth(month, 1) })}>
-              <ChevronRight aria-label="Next month" className="h-4 w-4" />
+            <Button aria-label="Next month" variant="outline" size="sm" onClick={() => patch({ month: shiftMonth(month, 1) })}>
+              <ChevronRight aria-hidden className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -93,7 +96,7 @@ function CalendarPage() {
         </p>
 
         <FeedStatus at={board.generatedAt} warnings={board.warnings} />
-        <div className="my-4 flex gap-3"><Button variant={agenda ? 'outline' : 'default'} onClick={() => setAgenda(false)}>Month</Button><Button variant={agenda ? 'default' : 'outline'} onClick={() => setAgenda(true)}>Agenda</Button></div>
+        <div className="my-4 flex gap-3" role="group" aria-label="Calendar view"><Button aria-pressed={!agenda} variant={agenda ? 'outline' : 'default'} onClick={() => setAgenda(false)}>Month</Button><Button aria-pressed={agenda} variant={agenda ? 'default' : 'outline'} onClick={() => setAgenda(true)}>Agenda</Button></div>
         {agenda ? <section className="my-6">{games.length ? <div className="rounded-md bg-surface px-4 shadow-[var(--shadow-border)]">{games.map(g => <GameRow key={g.id} game={g} />)}</div> : <DataEmptyState title="No games this month" description="There are no games in this calendar view yet. Try another month or remove the current filters." linkTo="/" linkLabel="Back to today" />}</section> : null}
         <div className="mt-6">
           <FilterChips

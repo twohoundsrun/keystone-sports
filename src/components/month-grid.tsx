@@ -63,7 +63,7 @@ export function MonthGrid({
               key={cell.key}
               type="button"
               onClick={() => onSelect(cell.key)}
-              aria-label={`${cell.key}: ${list.length} games`}
+              aria-label={`${cell.key}: ${list.length ? list.map((g) => g.shortName).join(", ") : "no games"}`}
               aria-pressed={isSel}
               className={cn(
                 "flex min-h-16 flex-col items-start rounded-sm border px-1.5 py-1.5 text-left transition-colors sm:min-h-20",
@@ -81,6 +81,7 @@ export function MonthGrid({
                     key={g.id}
                     className={cn("h-1.5 w-1.5 rounded-full", g.status === "in" ? "bg-accent" : "bg-primary/50")}
                     title={g.shortName}
+                    aria-hidden
                   />
                 ))}
               </span>
