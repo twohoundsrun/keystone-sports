@@ -19,18 +19,21 @@ export function FeedStatus({ at, warnings = [] }: { at: string; warnings?: strin
   const delayed = age > 90_000 || warnings.includes(delayedWarning);
 
   return (
-    <div className="my-3 text-sm text-muted" role="status">
-      <p className="inline-flex items-center gap-1.5">
-        <RefreshCw className={cn("h-3.5 w-3.5 shrink-0", spin && "animate-spin")} aria-hidden />
+    <div className={cn("my-4 rounded-md border px-3 py-2.5 text-sm", delayed ? "border-warn/40 bg-warn/5" : "border-border bg-surface")} role="status" aria-live="polite">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted">
+        <span className={cn("inline-flex items-center gap-1.5 font-semibold", delayed ? "text-warn" : "text-fg")}>
+          <RefreshCw className={cn("h-3.5 w-3.5 shrink-0", spin && "animate-spin")} aria-hidden />
+          {delayed ? "Updates delayed" : fresh ? "Fresh feed" : "Last checked"}
+        </span>
         <span>Data checked {when} · Times Eastern</span>
-      </p>
+      </div>
       {feedWarnings.length ? (
         <p className="mt-1 text-warn">
           Some feeds unavailable: {feedWarnings.join(" · ")}. Empty results may be incomplete.
         </p>
       ) : null}
       {delayed ? (
-        <p className="mt-1 text-warn">{delayedWarning}</p>
+        <p className="mt-1 text-warn">Showing the last available scores. Refresh shortly for the latest board.</p>
       ) : null}
     </div>
   );

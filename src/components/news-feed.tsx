@@ -59,6 +59,38 @@ export function DeskArticle({ item }: { item: NewsItem }) {
   );
 }
 
+export function LeadArticle({ item }: { item: NewsItem }) {
+  const team = item.teamSlug ? TEAM_BY_SLUG[item.teamSlug] : undefined;
+  return (
+    <article className="overflow-hidden rounded-lg border border-accent/35 bg-surface shadow-[var(--shadow-elevated)]">
+      {item.image ? (
+        <a href={item.href} target="_blank" rel="noreferrer" className="block">
+          <img src={item.image} alt="" width={960} height={360} loading="eager" decoding="async" className="h-48 w-full object-cover sm:h-64" />
+        </a>
+      ) : null}
+      <div className="p-5 sm:p-6">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-t1 font-semibold uppercase tracking-label text-accent">
+          <span>Lead story</span>
+          <span className="text-subtle">·</span>
+          <span>{item.source || "External coverage"}</span>
+          {team?.shortName || item.league ? <><span className="text-subtle">·</span><span>{team?.shortName ?? item.league}</span></> : null}
+          {item.published ? <><span className="text-subtle">·</span><span>{relativeWhen(item.published)}</span></> : null}
+        </div>
+        <a href={item.href} target="_blank" rel="noreferrer" className="mt-2 block hover:text-accent">
+          <h2 className="font-display text-3xl leading-tight tracking-wide sm:text-4xl">{item.headline}</h2>
+        </a>
+        {item.description ? (
+          <div className="mt-4 border-l-2 border-accent/50 pl-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted">Why it matters</p>
+            <p className="mt-1 max-w-3xl text-base leading-relaxed text-muted">{item.description}</p>
+          </div>
+        ) : null}
+        <p className="mt-4 text-xs text-subtle">Keystone Beat links to the original reporting; coverage opens on {item.source || "the source site"}.</p>
+      </div>
+    </article>
+  );
+}
+
 export function WireList({ articles }: { articles: NewsItem[] }) {
   if (!articles.length) return null;
   return (

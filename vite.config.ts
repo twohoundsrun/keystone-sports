@@ -150,13 +150,19 @@ export default defineConfig(({ command, isPreview }) => ({
     host: "0.0.0.0",
     port: 8080,
     strictPort: true,
+    allowedHosts: [".us4.manus.computer"],
   },
   preview: {
     host: "127.0.0.1",
     port: 8081,
     strictPort: true,
   },
-  resolve: { tsconfigPaths: true },
+  resolve: {
+    tsconfigPaths: true,
+    alias: {
+      "cloudflare:workers": join(process.cwd(), "src/lib/publishing/cloudflare-workers-dev.ts"),
+    },
+  },
   plugins: [
     pgliteBootstrapPlugin(),
     // Before tanstackStart so /auth/popup never falls through to the SPA.

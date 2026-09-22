@@ -145,7 +145,7 @@ export const beatAdminMiddleware = createMiddleware({ type: 'request' }).server(
     try {
       const { db } = await import('@/lib/publishing/runtime.server');
       const { mutateBeatItemForAdmin } = await import('@/lib/beat/mutate.server');
-      return json({ ok: true, ...(await mutateBeatItemForAdmin(db(), owner.id, parsedBody.body)) });
+      return json(await mutateBeatItemForAdmin(db(), owner.id, parsedBody.body));
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
       if (message === 'Beat item not found.') return json({ ok: false, error: message }, 404);

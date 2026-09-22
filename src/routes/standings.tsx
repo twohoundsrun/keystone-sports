@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { getStandings } from "@/lib/sports/api";
 import { FeedStatus } from "@/components/feed-status";
 import { ResponsibleGamblingNote } from "@/components/responsible-gambling-note";
+import { DataEmptyState } from "@/components/data-empty-state";
 import { TEAM_BY_SLUG } from "@/data/teams";
 import { cn } from "@/lib/utils";
 import type { StandingsLeague, StandingRow } from "@/lib/sports/types";
@@ -210,7 +211,16 @@ function StandingsPage() {
             );
           })}
         </div>
-      ) : null}
+      ) : (
+        <div className="mt-6">
+          <DataEmptyState
+            title="Standings unavailable"
+            description="The standings feed did not return a table for this league. Try another league or check back after the next update."
+            linkTo="/"
+            linkLabel="Back to scores"
+          />
+        </div>
+      )}
       <p className="mt-8 text-xs text-subtle">Showing PA regional team divisions. Records reset for 2026 season.</p>
       <ResponsibleGamblingNote className="mt-2" />
     </div>

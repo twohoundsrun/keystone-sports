@@ -1,4 +1,5 @@
 import { FeedStatus } from '@/components/feed-status';
+import { DataEmptyState } from '@/components/data-empty-state';
 import { PublishedUpdates } from '@/components/published-updates';
 import { GameRow } from '@/components/game-card';
 import { useMemo, useState } from "react";
@@ -93,7 +94,7 @@ function CalendarPage() {
 
         <FeedStatus at={board.generatedAt} warnings={board.warnings} />
         <div className="my-4 flex gap-3"><Button variant={agenda ? 'outline' : 'default'} onClick={() => setAgenda(false)}>Month</Button><Button variant={agenda ? 'default' : 'outline'} onClick={() => setAgenda(true)}>Agenda</Button></div>
-        {agenda ? <section className="my-6 rounded-md bg-surface p-4">{games.length ? games.map(g => <GameRow key={g.id} game={g} />) : <p>No games returned for this month.</p>}</section> : null}
+        {agenda ? <section className="my-6">{games.length ? <div className="rounded-md bg-surface px-4 shadow-[var(--shadow-border)]">{games.map(g => <GameRow key={g.id} game={g} />)}</div> : <DataEmptyState title="No games this month" description="There are no games in this calendar view yet. Try another month or remove the current filters." linkTo="/" linkLabel="Back to today" />}</section> : null}
         <div className="mt-6">
           <FilterChips
             region={region}
@@ -128,6 +129,9 @@ function CalendarPage() {
                 {dayGames.map((g) => (
                   <GameCard key={g.id} game={g} />
                 ))}
+                {!dayGames.length && !dayEvents.length ? (
+                  <DataEmptyState title="Nothing listed" description="No games or desk updates are listed for this day. Choose another date or check the full agenda." linkTo="/calendar" linkLabel="View the agenda" />
+                ) : null}
               </div>
             </div>
           </FadeSwap>

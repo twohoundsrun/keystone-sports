@@ -3,6 +3,7 @@ import type { BeatCategory, PublicBeatItem } from "@/lib/beat/types";
 import { BEAT_CATEGORY_LABELS } from "@/lib/beat/types";
 import { BeatCard } from "./beat-card";
 import { BeatErrorBoundary } from "./beat-boundaries";
+import { relativeWhen } from "@/lib/sports/time";
 
 const FILTERS: Array<BeatCategory | "all"> = [
   "all",
@@ -29,7 +30,7 @@ function ModuleFallback() {
   );
 }
 
-function BeatModuleInner({ items }: Props) {
+function BeatModuleInner({ items, generatedAt }: Props) {
   const [filter, setFilter] = useState<BeatCategory | "all">("all");
   const visible = useMemo(
     () => (filter === "all" ? items : items.filter((i) => i.category === filter)),
@@ -44,6 +45,7 @@ function BeatModuleInner({ items }: Props) {
           <p className="mt-1 max-w-2xl text-sm text-muted">
             Curated PA sports desk — short Keystone context, original source always linked. Manual approval only.
           </p>
+          {generatedAt ? <p className="mt-1 text-xs text-subtle">Desk updated {relativeWhen(generatedAt)} · Original reporting remains linked on every card.</p> : null}
         </div>
       </div>
 

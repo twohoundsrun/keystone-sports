@@ -1,4 +1,5 @@
 import { FeedStatus } from '@/components/feed-status';
+import { DataEmptyState } from '@/components/data-empty-state';
 import { ResponsibleGamblingNote } from '@/components/responsible-gambling-note';
 import { useMemo, useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -121,7 +122,7 @@ function OddsPage() {
                       ? "Star a club first — then lines for those games show up here."
                       : region === "following"
                         ? "None of your clubs have a line in this window."
-                        : "No upcoming PA games with a line yet."}
+                        : "No upcoming PA games with a line yet. Check back closer to game time."}
                   </td>
                 </tr>
               ) : null}
@@ -160,13 +161,16 @@ function OddsPage() {
             </article>
           ))}
           {postedLines.length === 0 ? (
-            <p className="py-10 text-center text-muted">
-              {region === "following" && followHydrated && !followed.length
-                ? "Star a club first — then lines for those games show up here."
+            <DataEmptyState
+              title={region === "following" && followHydrated && !followed.length ? "No teams selected" : "No posted lines yet"}
+              description={region === "following" && followHydrated && !followed.length
+                ? "Follow a team to see its games and public lines here."
                 : region === "following"
-                  ? "None of your clubs have a line in this window."
-                  : "No upcoming PA games with a line yet."}
-            </p>
+                  ? "None of your followed teams has a public line in this window."
+                  : "Scheduled games stay visible below while public numbers are pending. Check back closer to start time."}
+              linkTo={region === "following" && followHydrated && !followed.length ? "/teams" : "/calendar"}
+              linkLabel={region === "following" && followHydrated && !followed.length ? "Choose teams" : "Open calendar"}
+            />
           ) : null}
         </div>
         {awaitingLines.length ? (

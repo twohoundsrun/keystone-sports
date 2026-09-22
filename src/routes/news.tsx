@@ -3,7 +3,7 @@ import { PendingScreen } from "@/components/pending-screen";
 import { RouteError } from "@/components/route-error";
 import { BeatModule } from "@/components/beat/beat-module";
 import { PublishedReports } from "@/components/published-reports";
-import { BreakingAlert, DeskArticle, LockerRoom, WireList } from "@/components/news-feed";
+import { BreakingAlert, DeskArticle, LeadArticle, LockerRoom, WireList } from "@/components/news-feed";
 import { isPremiumBeat } from "@/components/news-feed-utils";
 
 import { getNewsWire } from "@/lib/sports/api";
@@ -32,7 +32,9 @@ function NewsPage() {
   const premium = beat.enabled ? beat.items.filter(isPremiumBeat) : [];
   const deskBeat = beat.enabled ? beat.items.filter((i) => !isPremiumBeat(i)) : [];
   const deskWire = ranked.filter((a) => a.image).slice(0, 8);
-  const used = new Set(deskWire.map((a) => a.id));
+  const lead = deskWire[0] ?? ranked[0];
+  const supportingWire = lead ? deskWire.filter((a) => a.id !== lead.id).slice(0, 6) : [];
+  const used = new Set([...(lead ? [lead.id] : []), ...supportingWire.map((a) => a.id)]);
   const wireList = ranked.filter((a) => !used.has(a.id));
   const highlights = [...(wire.highlights ?? [])].sort((a, b) => {
     const af = a.teamSlug && followed.includes(a.teamSlug) ? 0 : 1;
@@ -62,12 +64,18 @@ function NewsPage() {
 
       <PublishedReports />
 
-      {deskWire.length ? (
+      {lead ? (
+        <section className="mt-10" aria-label="Lead story">
+          <LeadArticle item={lead} />
+        </section>
+      ) : null}
+
+      {supportingWire.length ? (
         <section className="mt-10" aria-label="Beat desk">
-          <h2 className="font-display text-t4 tracking-display">From the papers</h2>
-          <p className="mt-1 text-t2 text-muted">Curated PA wire with art — not the full national firehose.</p>
+          <h2 className="font-display text-t4 tracking-display">More from the Pennsylvania beat</h2>
+          <p className="mt-1 text-t2 text-muted">Source-linked coverage, prioritized for Keystone teams.</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {deskWire.map((a) => (
+            {supportingWire.map((a) => (
               <DeskArticle key={a.id} item={a} />
             ))}
           </div>

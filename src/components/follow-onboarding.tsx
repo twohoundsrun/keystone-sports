@@ -73,12 +73,12 @@ export function FollowOnboarding() {
       <div className="rounded-md border border-border bg-surface p-5 shadow-[var(--shadow-border)] sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-accent">Get started</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-accent">Make this desk yours</p>
             <h2 className="mt-1 font-display text-2xl tracking-wide sm:text-3xl">
-              Follow 3 Pennsylvania teams
+              Follow the teams you care about
             </h2>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted">
-              Pin a few clubs so scores and the ticker prioritize what you care about.
+              Pick a few clubs so scores, headlines, and the ticker prioritize what matters to you. You can change this anytime.
             </p>
           </div>
           <button

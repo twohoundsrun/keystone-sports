@@ -146,6 +146,10 @@ function TodayPage() {
   const rankedNews = useMemo(() => rankPaNews(news.articles, followed), [news.articles, followed]);
   const lead = rankedNews.find((a) => a.image) ?? rankedNews[0];
   const moreNews = rankedNews.filter((a) => a.id !== lead?.id).slice(0, 6);
+  const takeSources = useMemo(
+    () => Array.from(new Set(rankedNews.map((article) => article.source).filter((source): source is string => Boolean(source)))).slice(0, 4),
+    [rankedNews],
+  );
 
   const weekSource = useMemo(() => [...board.games, ...board.upcoming], [board.games, board.upcoming]);
   const weekGames = useMemo(
@@ -246,6 +250,9 @@ function TodayPage() {
               <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
                 {formatLongDate(date)}
               </h1>
+              <p className="mt-2 max-w-2xl text-sm font-medium leading-relaxed text-fg sm:text-base">
+                Scores, schedules, team hubs, and the Pennsylvania sports beat — organized around what you follow.
+              </p>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => patch({ date: addDays(date, -1) })}>
@@ -272,7 +279,7 @@ function TodayPage() {
           <p className="mt-2 max-w-2xl text-base leading-snug text-fg sm:text-lg">{desk.line}</p>
           {desk.lede ? <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted">{desk.lede}</p> : null}
           <div className="mt-3 flex flex-wrap gap-3 text-sm">
-            {followed.length ? <button className="font-semibold text-accent underline" onClick={() => patch({ region: 'following' })}>My Teams ({followed.length})</button> : <Link to="/teams" className="font-semibold text-accent underline">Choose your teams</Link>}
+            {followed.length ? <button className="font-semibold text-accent underline" onClick={() => patch({ region: 'following' })}>My Teams ({followed.length})</button> : <Link to="/teams" className="font-semibold text-accent underline">Follow your teams →</Link>}
           </div>
           <FeedStatus at={board.generatedAt} warnings={board.warnings} />
           <WeekStrip
@@ -439,11 +446,18 @@ function TodayPage() {
           ) : null}
 
           <section className="rounded-md bg-surface p-5 shadow-[var(--shadow-border)]">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted">Column</p>
-            <h2 className="mt-1 font-display text-2xl tracking-wide">Today's take</h2>
-            <p className="mt-2 text-sm text-muted">
-              An AI-assisted recap from dated scores and headlines. Check the sources before sharing.
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted">Column</p>
+              <Badge variant={brief ? "ok" : aiAccess.aiEnabled ? "outline" : "default"}>{brief ? "Generated" : aiAccess.aiEnabled ? "Ready to write" : "Unavailable"}</Badge>
+            </div>
+            <h2 className="mt-1 font-display text-2xl tracking-wide">Today&apos;s take</h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
+              An AI-assisted desk note built from today&apos;s board and source-linked headlines. It is a starting point, not a replacement for the original reporting.
             </p>
+            <div className="mt-3 rounded-sm border border-border bg-elevated/50 p-3 text-xs text-muted">
+              <p className="font-semibold uppercase tracking-wider text-subtle">Source check</p>
+              <p className="mt-1">{games.length} game{games.length === 1 ? "" : "s"} on the board · {rankedNews.length} headline{rankedNews.length === 1 ? "" : "s"} available{takeSources.length ? ` · ${takeSources.join(", ")}` : ""}</p>
+            </div>
             {aiAccess.aiEnabled ? (
               <Button className="mt-4 w-full" onClick={() => void runBrief()} disabled={busy || !aiAccess.signedIn}>
                 <PenLine className="h-4 w-4" />
@@ -457,6 +471,7 @@ function TodayPage() {
             {briefError ? <p className="mt-3 text-sm text-danger">{briefError}</p> : null}
             {brief ? (
               <div className="mt-4 space-y-3 border-t border-border pt-4 text-sm leading-relaxed text-fg">
+                <p className="text-xs font-semibold uppercase tracking-wider text-accent">Desk note · generated for {formatLongDate(date)}</p>
                 {brief.split(/\n\n+/).map((para) => (
                   <p key={para.slice(0, 24)}>{para}</p>
                 ))}

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, type ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { CalendarDays, ListOrdered, Newspaper, Shield, Table2, Trophy } from "lucide-react";
+import { CalendarDays, ListOrdered, MoreHorizontal, Newspaper, Shield, Table2, Trophy } from "lucide-react";
 import { ScoreTicker } from "@/components/score-ticker";
 import { ThemeSelector } from "@/components/theme-selector";
 import { ResponsibleGamblingNote } from "@/components/responsible-gambling-note";
@@ -20,11 +20,14 @@ const NAV = [
 
 const TABS = [
   { to: "/", label: "Scores", icon: Trophy },
+  { to: "/news", label: "News", icon: Newspaper },
+  { to: "/teams", label: "Teams", icon: Shield },
+] as const;
+
+const MORE_ITEMS = [
   { to: "/calendar", label: "Calendar", icon: CalendarDays },
   { to: "/standings", label: "Standings", icon: ListOrdered },
   { to: "/odds", label: "Odds", icon: Table2 },
-  { to: "/news", label: "News", icon: Newspaper },
-  { to: "/teams", label: "Teams", icon: Shield },
 ] as const;
 
 function KeystoneMark({ className }: { className?: string }) {
@@ -145,7 +148,7 @@ export function DeskShell({ children }: { children: ReactNode }) {
         </div>
       </footer>
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm md:hidden">
-        <div className="grid grid-cols-6">
+        <div className="grid grid-cols-4">
           {TABS.map((item) => {
             const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
             const Icon = item.icon;
@@ -163,6 +166,36 @@ export function DeskShell({ children }: { children: ReactNode }) {
               </Link>
             );
           })}
+          <details className="relative flex min-h-14 flex-col items-center justify-center">
+            <summary
+              className={cn(
+                "flex min-h-14 w-full list-none flex-col items-center justify-center gap-0.5 px-0.5 text-[10px] font-semibold leading-tight marker:hidden sm:text-xs",
+                MORE_ITEMS.some((item) => pathname.startsWith(item.to)) ? "text-accent" : "text-muted",
+              )}
+            >
+              <MoreHorizontal className="h-5 w-5 shrink-0" strokeWidth={1.8} />
+              More
+            </summary>
+            <div className="absolute right-2 bottom-16 min-w-44 rounded-md border border-border bg-surface p-2 shadow-[var(--shadow-elevated)]">
+              {MORE_ITEMS.map((item) => {
+                const Icon = item.icon;
+                const active = pathname.startsWith(item.to);
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className={cn(
+                      "flex min-h-11 items-center gap-3 rounded-sm px-3 text-sm font-semibold",
+                      active ? "bg-accent-soft text-accent" : "text-muted hover:bg-elevated hover:text-fg",
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </details>
         </div>
       </nav>
     </div>
