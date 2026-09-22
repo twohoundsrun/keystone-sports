@@ -23,7 +23,4 @@ jobs:
       - name: Production build
         run: npm run build
       - name: Typecheck
-        # Known baseline: duplicate `ok` narrowing in src/lib/beat-admin-middleware.ts.
-        # Keep the signal without blocking merge until that file is cleaned up.
-        continue-on-error: true
         run: npm run typecheck

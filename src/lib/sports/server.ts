@@ -674,22 +674,6 @@ function byStart(a: Game, b: Game): number {
   return a.start.localeCompare(b.start);
 }
 
-async function buildPool(): Promise<Game[]> {
-  const day = dateKeyNY();
-  const empty: Game[] = [];
-  const [live, week, schedules, mlb] = await Promise.all([
-    timed(liveScoreboards(day), 8000, empty),
-    timed(weekOddsBoards(day), 8000, empty),
-    timed(espnSchedulesForPa(), 10000, empty),
-    timed(mlbSchedule(addDays(day, -10), addDays(day, 21)), 8000, empty),
-  ]);
-  return mergeGames(live, mergeGames(week, mergeGames(schedules, mlb))).filter((g) => g.paSlugs.length);
-}
-
-async function loadPool(): Promise<Game[]> {
-  return cached("pool", 25_000, buildPool, 15 * 60_000);
-}
-
 function sliceToday(day: string, games: Game[]) {
   return {
     date: day,

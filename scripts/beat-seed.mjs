@@ -19,7 +19,6 @@ import { spawnSync } from "node:child_process";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const sqlFile = join(root, "drizzle/seed/beat_m2_real.sql");
 const remote = process.argv.includes("--remote");
-const local = process.argv.includes("--local") || !remote;
 
 const target = remote ? "--remote" : "--local";
 console.log(`[beat:seed] applying ${sqlFile} (${target})`);
