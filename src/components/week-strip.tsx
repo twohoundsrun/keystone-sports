@@ -14,7 +14,7 @@ function hourNY(iso: string): number {
 }
 
 /** Four ET windows: morning / afternoon / prime / late. */
-export function densityBars(games: Game[], dateKey: string): [number, number, number, number] {
+function densityBars(games: Game[], dateKey: string): [number, number, number, number] {
   const bars: [number, number, number, number] = [0, 0, 0, 0];
   for (const game of games) {
     if (game.dateKey !== dateKey) continue;
