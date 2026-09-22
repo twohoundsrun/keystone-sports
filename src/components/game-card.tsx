@@ -131,13 +131,13 @@ export function GameCard({
         highlightNext && "bg-accent-soft ring-1 ring-accent/50",
       )}
     >
-      <div className="mb-3 flex items-center justify-between gap-2">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <p className="text-t1 font-semibold uppercase tracking-label text-subtle">
           {game.league}
           {game.broadcast ? ` · ${game.broadcast}` : ""}
         </p>
         {live ? (
-          <span className="inline-flex items-center gap-1.5">
+          <span className="inline-flex shrink-0 items-center gap-1.5">
             <span className="live-dot inline-block h-2 w-2 rounded-full bg-ok" aria-hidden />
             <Badge variant="live">Live · {game.statusText}</Badge>
           </span>

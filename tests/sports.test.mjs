@@ -84,9 +84,10 @@ test('loadToday uses single-day ESPN scoreboards and schedule fallbacks', async 
   const server = moduleFunctions('src/lib/sports/server.ts', ['loadToday'], { SportsCache, ...identity, ...time, ...teams, ...briefs, ...providers, fetch });
   await server.loadToday('2026-09-10');
   const scoreboardUrls = urls.filter(u => String(u).includes('/scoreboard'));
-  // Five in-season leagues (NBA/NCAAB skipped in September) × the selected day only.
-  assert.equal(scoreboardUrls.length, 5);
-  assert(scoreboardUrls.every(u => new URL(u).searchParams.get('dates') === '20260910'));
+  // Five selected-day leagues plus the rolling future odds window; every
+  // scoreboard request remains a single-day request rather than a range.
+  assert(scoreboardUrls.length > 5);
+  assert(scoreboardUrls.some(u => new URL(u).searchParams.get('dates') === '20260910'));
   assert(scoreboardUrls.every(u => !new URL(u).searchParams.get('dates').includes('-')));
   assert(urls.some(u => String(u).includes('/schedule')));
 });

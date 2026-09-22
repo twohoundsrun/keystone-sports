@@ -188,10 +188,10 @@ function OddsPage() {
                   key={g.id}
                   to="/game"
                   search={{ date: g.dateKey, id: g.id }}
-                  className="flex items-center justify-between gap-4 py-3 text-sm hover:text-accent"
+                  className="flex flex-col items-start gap-1 py-3 text-sm hover:text-accent sm:flex-row sm:items-center sm:justify-between sm:gap-4"
                 >
                   <span className="min-w-0 truncate font-semibold">{g.away.abbr} @ {g.home.abbr}</span>
-                  <span className="shrink-0 text-xs text-muted">{formatKick(g.start)} · Not posted</span>
+                  <span className="text-xs text-muted sm:shrink-0">{formatKick(g.start)} · Not posted</span>
                 </Link>
               ))}
             </div>

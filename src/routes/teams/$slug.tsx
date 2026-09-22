@@ -98,7 +98,7 @@ function TeamPage() {
           <div className="flex h-20 w-20 items-center justify-center rounded-md bg-elevated p-2 sm:h-24 sm:w-24">
             <img data-logo src={teamLogo(team)} alt="" width={80} height={80} decoding="async" className="h-16 w-16 object-contain sm:h-20 sm:w-20" />
           </div>
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 basis-0">
             <p className="text-xs font-semibold uppercase tracking-widest text-accent">Team hub</p>
             <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-muted">{team.league} · {team.sport} · {team.city}</p>
             <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">{team.name}</h1>
@@ -126,7 +126,7 @@ function TeamPage() {
               ) : null}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto sm:basis-auto">
             <FollowButton slug={team.slug} name={team.shortName} />
             {page?.record?.summary ? (
               <div className="rounded-md bg-elevated px-4 py-3 text-right">
