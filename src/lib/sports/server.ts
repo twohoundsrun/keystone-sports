@@ -214,6 +214,17 @@ function detailsIsSpread(s: string): boolean {
 function spreadLine(first: Record<string, unknown>): string | undefined {
   const details = oddStr(first.details);
   if (details && detailsIsSpread(details)) return details;
+  const pointSpread = rec(first.pointSpread);
+  const awayLine = oddStr(rec(rec(pointSpread?.away)?.close)?.line);
+  const homeLine = oddStr(rec(rec(pointSpread?.home)?.close)?.line);
+  if (awayLine || homeLine) {
+    const awayTeam = str(rec(rec(pointSpread?.away)?.close)?.team) || str(rec(rec(first.awayTeamOdds)?.team)?.abbreviation);
+    const homeTeam = str(rec(rec(pointSpread?.home)?.close)?.team) || str(rec(rec(first.homeTeamOdds)?.team)?.abbreviation);
+    if (awayLine && homeTeam) return `${homeTeam} ${homeLine ?? awayLine}`;
+    if (awayLine && awayTeam) return `${awayTeam} ${awayLine}`;
+    if (homeLine && homeTeam) return `${homeTeam} ${homeLine}`;
+    return homeLine ?? awayLine;
+  }
   const n = Number(first.spread);
   if (!Number.isFinite(n) || n === 0) return undefined;
   const homeAbbr = str(rec(rec(first.homeTeamOdds)?.team)?.abbreviation);
@@ -641,6 +652,24 @@ async function weekOddsBoards(day: string): Promise<Game[]> {
   return chunks.flat();
 }
 
+async function upcomingOddsBoards(day: string): Promise<Game[]> {
+  // Team schedules provide the PA calendar, but ESPN only attaches current
+  // public markets to scoreboard events. Fetch a small rolling window so the
+  // Odds page can show lines before game day without using range requests.
+  const offsets = [1, 2, 3, 4, 5, 6, 7, 10];
+  const jobs = offsets.flatMap((offset) => {
+    const date = espnDateParam(addDays(day, offset));
+    return [
+      { sport: "football", league: "nfl", date },
+      { sport: "football", league: "college-football", date },
+      { sport: "baseball", league: "mlb", date },
+    ];
+  });
+  return mapLimit(jobs, 8, (job) =>
+    espnScoreboard(job.sport, job.league, job.date).catch(() => [] as Game[]),
+  );
+}
+
 function byStart(a: Game, b: Game): number {
   return a.start.localeCompare(b.start);
 }
@@ -724,12 +753,15 @@ export async function loadToday(date?: string) {
     const schedules = nearCurrentDate(day)
       ? timed(espnSchedulesForPa(), 10_000, [] as Game[])
       : Promise.resolve([] as Game[]);
-    const [scores, nearby, mlb] = await Promise.all([
+    const [scores, nearby, mlb, futureOdds] = await Promise.all([
       scoreboardDate(day),
       schedules,
       safeMlb(addDays(day, -2), addDays(day, 10)),
+      nearCurrentDate(day)
+        ? timed(upcomingOddsBoards(day), 20_000, [] as Game[])
+        : Promise.resolve([] as Game[]),
     ]);
-    const games = mergeGames(mlb.games, mergeGames(scores.games, nearby));
+    const games = mergeGames(futureOdds, mergeGames(mlb.games, mergeGames(scores.games, nearby)));
     const board = sliceToday(day, games);
     return { ...board, ...freshness(board.games, [...scores.warnings, ...mlb.warnings]) };
   }, 5 * 60_000);
