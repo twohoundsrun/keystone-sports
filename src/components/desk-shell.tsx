@@ -64,27 +64,27 @@ export function DeskShell({ children }: { children: ReactNode }) {
         <ScoreTicker />
         <header className="editorial-masthead border-b border-border bg-bg/95 backdrop-blur-sm">
           <div className="editorial-utility border-b border-border">
-            <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted sm:px-6">
+            <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-2 text-xs text-muted sm:px-6">
               <span>{today}</span>
-              <span className="hidden sm:inline">Philadelphia · Pittsburgh · Colleges</span>
+              <span className="hidden sm:inline">Philadelphia · Pittsburgh · the colleges</span>
             </div>
           </div>
-          <div className="relative mx-auto flex max-w-6xl items-center justify-center px-4 py-5 sm:px-6 sm:py-7">
-            <Link to="/" className="group text-center">
-              <span className="flex items-center justify-center gap-2.5">
+          <div className="relative mx-auto flex max-w-6xl items-center justify-start px-4 py-5 sm:px-6 sm:py-6">
+            <Link to="/" className="group text-left">
+              <span className="flex items-center gap-2.5">
                 <KeystoneMark className="h-7 w-7 transition-transform group-hover:scale-105 sm:h-9 sm:w-9" />
-                <span className="font-serif text-3xl font-black tracking-[-0.06em] sm:text-5xl">Keystone Beat</span>
+                <span className="font-serif text-3xl font-black tracking-[-0.05em] sm:text-5xl">Keystone Beat</span>
               </span>
-              <span className="mt-2 block border-t border-accent pt-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-accent sm:text-xs">
-                The local angle on Pennsylvania sports
+              <span className="mt-1.5 block text-sm text-muted sm:pl-12">
+                Pennsylvania sports
               </span>
             </Link>
             <div className="absolute right-4 sm:right-6">
               <ThemeSelector />
             </div>
           </div>
-          <nav aria-label="Primary navigation" className="border-t border-border bg-surface/60">
-            <div className="mx-auto flex max-w-6xl items-center justify-center gap-1 overflow-x-auto px-4 sm:gap-2 sm:px-6">
+          <nav aria-label="Primary navigation" className="border-t border-border">
+            <div className="mx-auto flex max-w-6xl items-center justify-start gap-1 overflow-x-auto px-4 sm:gap-2 sm:px-6">
               {NAV.map((item) => {
                 const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
                 return (
@@ -92,7 +92,7 @@ export function DeskShell({ children }: { children: ReactNode }) {
                     key={item.to}
                     to={item.to}
                     className={cn(
-                      "inline-flex min-h-11 shrink-0 items-center px-3 text-xs font-bold uppercase tracking-[0.08em] sm:px-4 sm:text-sm",
+                      "inline-flex min-h-11 shrink-0 items-center border-r border-border px-3 text-sm font-semibold sm:px-4",
                       active ? "border-b-2 border-accent text-fg" : "text-muted hover:text-fg",
                     )}
                   >

@@ -235,13 +235,13 @@ function TodayPage() {
   };
 
   return (
-    <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
-      <section className="home-summary border-b border-border bg-surface">
+    <div className="editorial-home">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\u003c') }} />
+      <section className="home-summary border-b border-border bg-bg">
         <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-accent">The local angle</p>
+              <p className="editorial-label">Pennsylvania sports</p>
               <h1 className="mt-1 font-serif text-3xl font-black tracking-tight sm:text-5xl">
                 {date === today ? "Today in Pennsylvania sports" : formatLongDate(date)}
               </h1>
@@ -285,7 +285,7 @@ function TodayPage() {
             onSelect={(d) => patch({ date: d })}
           />
           {liveStrip.length ? (
-            <section className="mt-4 rounded-md border border-ok/30 bg-ok/5 p-3" aria-label="Other live games">
+            <section className="mt-4 border-y border-ok/40 py-3" aria-label="Other live games">
               <div className="mb-2 flex items-center gap-2">
                 <Badge variant="live">Live now</Badge>
                 <span className="text-xs font-semibold uppercase tracking-widest text-muted">
@@ -298,7 +298,7 @@ function TodayPage() {
                   key={g.id}
                   to="/game"
                   search={{ date: g.dateKey, id: g.id }}
-                  className="flex shrink-0 items-center gap-2 rounded-full bg-elevated px-3 py-2 text-sm hover:bg-accent-soft"
+                  className="flex shrink-0 items-center gap-2 border-r border-border pr-3 text-sm hover:text-accent"
                 >
                   <span className="font-semibold">{g.away.abbr} {g.away.score} · {g.home.abbr} {g.home.score}</span>
                   <span className="text-muted">{g.statusText}</span>
@@ -333,7 +333,7 @@ function TodayPage() {
                 <FadeSwap id={`feature-${date}-${feature.id}`} className="order-2">
                   <section className="lg:border-l lg:border-border lg:pl-6" aria-label="Live and featured game">
                     <div className="mb-2 flex items-baseline justify-between gap-3">
-                      <p className="text-xs font-semibold uppercase tracking-widest text-muted">{featuredLabel(feature)}</p>
+                      <p className="editorial-label">{featuredLabel(feature)}</p>
                       <Link to="/calendar" className="text-xs font-semibold text-accent hover:underline">Full scoreboard →</Link>
                     </div>
                     <GameCard game={feature} featured nextUp={feature.status === "pre" && isFollowedGame(feature, followed)} />
@@ -353,7 +353,7 @@ function TodayPage() {
         <div>
           <div className="mb-3 flex items-baseline justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-accent">The scoreboard</p>
+              <p className="editorial-label">The scoreboard</p>
               <h2 className="mt-1 font-serif text-3xl font-black tracking-tight">Today&apos;s games</h2>
             </div>
             <span className="text-right text-xs text-muted">{games.length} game{games.length === 1 ? "" : "s"}</span>
@@ -393,12 +393,12 @@ function TodayPage() {
           {upcoming.length ? (
             <section className="mt-10">
               <div className="mb-3 flex items-baseline justify-between">
-                <h2 className="font-display text-2xl tracking-wide">Coming up</h2>
+                <h2 className="font-serif text-2xl font-black tracking-tight">Coming up</h2>
                 <Link to="/calendar" className="inline-flex items-center gap-1 text-sm text-muted hover:text-fg">
                   Full calendar <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
-              <div className="rounded-md bg-surface px-4 shadow-[var(--shadow-border)]">
+              <div className="editorial-flat-list px-4">
                 {upcoming.map((g) => (
                   <GameRow key={g.id} game={g} />
                 ))}
@@ -408,8 +408,8 @@ function TodayPage() {
 
           {recent.length ? (
             <section className="mt-10">
-              <h2 className="mb-3 font-display text-2xl tracking-wide">Last night</h2>
-              <div className="rounded-md bg-surface px-4 shadow-[var(--shadow-border)]">
+              <h2 className="mb-3 font-serif text-2xl font-black tracking-tight">Last night</h2>
+              <div className="editorial-flat-list px-4">
                 {recent.map((g) => (
                   <GameRow key={g.id} game={g} />
                 ))}
@@ -422,7 +422,7 @@ function TodayPage() {
           {moreNews.length ? (
             <section>
               <div className="mb-3 flex items-baseline justify-between">
-                <h2 className="font-display text-xl tracking-wide">Headlines</h2>
+                    <h2 className="font-serif text-2xl font-black tracking-tight">Headlines</h2>
                 <Link to="/news" className="text-sm text-muted hover:text-fg">
                   All
                 </Link>
@@ -443,9 +443,9 @@ function TodayPage() {
             </section>
           ) : null}
 
-          <section className="rounded-md bg-surface p-5 shadow-[var(--shadow-border)]">
+          <section className="editorial-section-rule py-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-accent">The Pennsylvania take</p>
+              <p className="editorial-label">The Pennsylvania take</p>
               <Badge variant={brief ? "ok" : aiAccess.aiEnabled ? "outline" : "default"}>{brief ? "Filed" : aiAccess.aiEnabled ? "Desk note" : "Watching"}</Badge>
             </div>
             <h2 className="mt-1 font-serif text-3xl font-black tracking-tight">What matters tonight</h2>
@@ -482,6 +482,6 @@ function TodayPage() {
           </section>
         </aside>
       </div>
-    </>
+    </div>
   );
 }

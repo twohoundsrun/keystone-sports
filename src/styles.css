@@ -52,6 +52,7 @@
 
   --ks-font-display: "Oswald", "Arial Narrow", ui-sans-serif, system-ui, sans-serif;
   --ks-font-sans: "Source Sans 3", ui-sans-serif, system-ui, sans-serif;
+  --ks-font-editorial: Georgia, "Times New Roman", serif;
 
   --ks-text-1: clamp(0.75rem, 0.72rem + 0.15vw, 0.8125rem);
   --ks-text-2: clamp(0.8125rem, 0.78rem + 0.2vw, 0.875rem);
@@ -319,4 +320,58 @@
     min-height: 4rem;
     min-width: 3.25rem;
   }
+}
+
+/* The homepage reads like a regional sports section, not a component library. */
+.editorial-masthead,
+.editorial-home {
+  --editorial-rule: color-mix(in oklab, var(--ks-fg) 22%, transparent);
+}
+
+.editorial-masthead .font-serif,
+.editorial-home h1,
+.editorial-home h2,
+.editorial-home h3,
+.editorial-home .font-serif {
+  font-family: var(--ks-font-editorial);
+  letter-spacing: -0.025em;
+}
+
+.editorial-home .home-summary {
+  background: var(--ks-bg);
+}
+
+.editorial-home .score-card,
+.editorial-home .home-summary [class*="shadow-[var(--shadow-border)]"] {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.editorial-home .score-card {
+  border: 1px solid var(--editorial-rule);
+}
+
+.editorial-home .score-card + .score-card {
+  border-top: 0;
+}
+
+.editorial-home .editorial-section-rule {
+  border-top: 1px solid var(--editorial-rule);
+  border-bottom: 1px solid var(--editorial-rule);
+}
+
+.editorial-home .editorial-label {
+  color: var(--ks-accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.editorial-home .editorial-flat-list {
+  background: transparent;
+  border-top: 1px solid var(--editorial-rule);
+  border-bottom: 1px solid var(--editorial-rule);
+  box-shadow: none;
+  border-radius: 0;
 }
