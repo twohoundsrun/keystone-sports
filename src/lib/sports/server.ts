@@ -622,27 +622,10 @@ async function espnSchedulesForPa(): Promise<Game[]> {
   );
 }
 
-async function liveScoreboards(day: string): Promise<Game[]> {
-  const d = espnDateParam(day);
-  const month = Number(day.slice(5, 7));
-  const nbaOn = month <= 6 || month >= 10;
-  const ncaabOn = month <= 4 || month >= 11;
-  const jobs: Promise<Game[]>[] = [
-    espnScoreboard("football", "nfl", d).catch(() => []),
-    espnScoreboard("baseball", "mlb", d).catch(() => []),
-    espnScoreboard("hockey", "nhl", d).catch(() => []),
-    espnScoreboard("soccer", "usa.1", d).catch(() => []),
-    espnScoreboard("football", "college-football", d).catch(() => []),
-  ];
-  if (nbaOn) jobs.push(espnScoreboard("basketball", "nba", d).catch(() => []));
-  if (ncaabOn) jobs.push(espnScoreboard("basketball", "mens-college-basketball", d).catch(() => []));
-  const chunks = await Promise.all(jobs);
-  return chunks.flat();
-}
-
 async function weekOddsBoards(day: string): Promise<Game[]> {
-  // ESPN's scoreboard endpoint no longer reliably accepts date ranges.
-  // Keep the lightweight odds supplement to a single next-day request per league.
+  // Kept as a small, tested compatibility helper for callers that need the
+  // next-day public market supplement. Production boards use the rolling
+  // upcoming loader below.
   const next = espnDateParam(addDays(day, 1));
   const chunks = await Promise.all([
     espnScoreboard("football", "nfl", next).catch(() => []),

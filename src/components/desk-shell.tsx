@@ -10,12 +10,12 @@ import { useFollows } from "@/lib/sports/follow-store";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { to: "/", label: "Scores" },
-  { to: "/calendar", label: "Calendar" },
-  { to: "/odds", label: "Odds" },
+  { to: "/", label: "Home" },
   { to: "/news", label: "News" },
+  { to: "/calendar", label: "Scores" },
   { to: "/teams", label: "Teams" },
   { to: "/standings", label: "Standings" },
+  { to: "/odds", label: "Odds" },
 ] as const;
 
 const TABS = [
@@ -46,6 +46,12 @@ export function DeskShell({ children }: { children: ReactNode }) {
   const hydrateFollows = useFollows((s) => s.hydrate);
   const followed = useFollows((s) => s.slugs);
   const footerTeams = useMemo(() => teamsByFollowed(followed), [followed]);
+  const today = new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date());
 
   useEffect(() => {
     hydrateDesk();
@@ -56,43 +62,46 @@ export function DeskShell({ children }: { children: ReactNode }) {
     <div className="min-h-dvh bg-bg text-fg">
       <div className="sticky top-0 z-20">
         <ScoreTicker />
-        <header className="border-t-2 border-primary border-b border-border bg-bg/95 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-3 sm:gap-4 sm:px-6">
-          <Link to="/" className="group flex h-11 shrink-0 items-center gap-2 sm:gap-2.5">
-            <KeystoneMark className="h-8 w-8 transition-transform group-hover:scale-105 sm:h-9 sm:w-9" />
-            <span className="leading-none">
-              <span className="block font-display text-lg font-semibold tracking-widest sm:text-2xl">KEYSTONE BEAT</span>
-              <span className="block text-[10px] font-semibold uppercase tracking-widest text-accent sm:text-xs">
-                Pennsylvania Sports
-              </span>
-            </span>
-          </Link>
-          <span className="hidden border-l border-border pl-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-subtle lg:block">
-            Philly · Pittsburgh · Colleges
-          </span>
-          <nav className="hidden min-w-0 flex-1 items-center justify-end gap-1 md:flex">
-            {NAV.map((item) => {
-              const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={cn(
-                    "inline-flex h-11 shrink-0 items-center px-3 text-sm font-semibold",
-                    active
-                      ? "border-b-2 border-accent bg-accent-soft text-fg"
-                      : "text-muted hover:text-fg",
-                  )}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-          <div className="ml-auto md:ml-0">
-            <ThemeSelector />
+        <header className="editorial-masthead border-b border-border bg-bg/95 backdrop-blur-sm">
+          <div className="editorial-utility border-b border-border">
+            <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-2 text-xs text-muted sm:px-6">
+              <span>{today}</span>
+              <span className="hidden sm:inline">Philadelphia · Pittsburgh · the colleges</span>
+            </div>
           </div>
-        </div>
+          <div className="relative mx-auto flex max-w-6xl items-center justify-start px-4 py-5 sm:px-6 sm:py-6">
+            <Link to="/" className="group text-left">
+              <span className="flex items-center gap-2.5">
+                <KeystoneMark className="h-7 w-7 transition-transform group-hover:scale-105 sm:h-9 sm:w-9" />
+                <span className="font-serif text-3xl font-black tracking-[-0.05em] sm:text-5xl">Keystone Beat</span>
+              </span>
+              <span className="mt-1.5 block text-sm text-muted sm:pl-12">
+                Pennsylvania sports
+              </span>
+            </Link>
+            <div className="absolute right-4 sm:right-6">
+              <ThemeSelector />
+            </div>
+          </div>
+          <nav aria-label="Primary navigation" className="border-t border-border">
+            <div className="mx-auto flex max-w-6xl items-center justify-start gap-1 overflow-x-auto px-4 sm:gap-2 sm:px-6">
+              {NAV.map((item) => {
+                const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className={cn(
+                      "inline-flex min-h-11 shrink-0 items-center border-r border-border px-3 text-sm font-semibold sm:px-4",
+                      active ? "border-b-2 border-accent text-fg" : "text-muted hover:text-fg",
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </nav>
         </header>
       </div>
       <main className="pb-20 md:pb-0">{children}</main>
