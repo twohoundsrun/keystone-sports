@@ -241,12 +241,12 @@ function TodayPage() {
         <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-accent">Pennsylvania sports desk</p>
-              <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-                {formatLongDate(date)}
+              <p className="text-xs font-semibold uppercase tracking-widest text-accent">The local angle</p>
+              <h1 className="mt-1 font-serif text-3xl font-black tracking-tight sm:text-5xl">
+                {date === today ? "Today in Pennsylvania sports" : formatLongDate(date)}
               </h1>
               <p className="mt-2 max-w-2xl text-sm font-medium leading-relaxed text-fg sm:text-base">
-                Scores, schedules, team hubs, and the Pennsylvania sports beat — organized around what you follow.
+                Scores, stories, and the teams people across the Keystone State actually follow.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -271,7 +271,7 @@ function TodayPage() {
               </Button>
             </div>
           </div>
-          <p className="mt-2 max-w-2xl text-base leading-snug text-fg sm:text-lg">{desk.line}</p>
+          <p className="mt-2 max-w-2xl font-serif text-base font-semibold leading-snug text-fg sm:text-lg">{desk.line}</p>
           {desk.lede ? <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted">{desk.lede}</p> : null}
           <div className="mt-3 flex flex-wrap gap-3 text-sm">
             {followed.length ? <button className="font-semibold text-accent underline" onClick={() => patch({ region: 'following' })}>My Teams ({followed.length})</button> : <Link to="/teams" className="font-semibold text-accent underline">Follow your teams →</Link>}
@@ -310,21 +310,13 @@ function TodayPage() {
           {waitingFollows ? (
             <div className="mt-5 h-40 animate-pulse rounded-md bg-elevated" aria-hidden />
           ) : feature || lead ? (
-            <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
-              {feature ? (
-                <FadeSwap id={`feature-${date}-${feature.id}`}>
-                  <section aria-label="Now and next">
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">{featuredLabel(feature)}</p>
-                    <GameCard game={feature} featured nextUp={feature.status === "pre" && isFollowedGame(feature, followed)} />
-                  </section>
-                </FadeSwap>
-              ) : null}
+            <div className="mt-6 grid gap-6 border-y border-border py-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.8fr)]">
               {lead ? (
-                <article className="border-t border-border pt-4 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-accent">Today&apos;s story</p>
+                <article className="order-1 lg:order-1">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-accent">The lead</p>
                   {lead.image ? (
                     <a href={lead.href} target="_blank" rel="noreferrer" className="mt-3 block">
-                      <img src={lead.image} alt="" width={704} height={176} loading="lazy" decoding="async" className="h-36 w-full rounded-md object-cover" />
+                      <img src={lead.image} alt="" width={704} height={260} loading="lazy" decoding="async" className="aspect-[2.2/1] w-full object-cover" />
                     </a>
                   ) : null}
                   <p className="mt-3 text-xs font-semibold uppercase tracking-wider text-muted">
@@ -332,10 +324,21 @@ function TodayPage() {
                     {lead.published ? ` \u00b7 ${relativeWhen(lead.published)}` : ""}
                   </p>
                   <a href={lead.href} target="_blank" rel="noreferrer" className="mt-1 block hover:text-accent">
-                    <h2 className="font-display text-2xl leading-tight tracking-wide">{lead.headline}</h2>
+                    <h2 className="font-serif text-3xl font-black leading-[1.02] tracking-tight sm:text-4xl">{lead.headline}</h2>
                   </a>
                   {lead.description ? <p className="mt-2 text-sm leading-relaxed text-muted">{lead.description}</p> : null}
                 </article>
+              ) : null}
+              {feature ? (
+                <FadeSwap id={`feature-${date}-${feature.id}`} className="order-2">
+                  <section className="lg:border-l lg:border-border lg:pl-6" aria-label="Live and featured game">
+                    <div className="mb-2 flex items-baseline justify-between gap-3">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-muted">{featuredLabel(feature)}</p>
+                      <Link to="/calendar" className="text-xs font-semibold text-accent hover:underline">Full scoreboard →</Link>
+                    </div>
+                    <GameCard game={feature} featured nextUp={feature.status === "pre" && isFollowedGame(feature, followed)} />
+                  </section>
+                </FadeSwap>
               ) : null}
             </div>
           ) : null}
@@ -350,8 +353,8 @@ function TodayPage() {
         <div>
           <div className="mb-3 flex items-baseline justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-accent">The daily board</p>
-              <h2 className="mt-1 font-display text-2xl tracking-wide">Today&apos;s slate</h2>
+              <p className="text-xs font-semibold uppercase tracking-widest text-accent">The scoreboard</p>
+              <h2 className="mt-1 font-serif text-3xl font-black tracking-tight">Today&apos;s games</h2>
             </div>
             <span className="text-right text-xs text-muted">{games.length} game{games.length === 1 ? "" : "s"}</span>
           </div>
@@ -442,12 +445,12 @@ function TodayPage() {
 
           <section className="rounded-md bg-surface p-5 shadow-[var(--shadow-border)]">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted">Column</p>
-              <Badge variant={brief ? "ok" : aiAccess.aiEnabled ? "outline" : "default"}>{brief ? "Generated" : aiAccess.aiEnabled ? "Ready to write" : "Unavailable"}</Badge>
+              <p className="text-xs font-semibold uppercase tracking-wider text-accent">The Pennsylvania take</p>
+              <Badge variant={brief ? "ok" : aiAccess.aiEnabled ? "outline" : "default"}>{brief ? "Filed" : aiAccess.aiEnabled ? "Desk note" : "Watching"}</Badge>
             </div>
-            <h2 className="mt-1 font-display text-2xl tracking-wide">Today&apos;s take</h2>
+            <h2 className="mt-1 font-serif text-3xl font-black tracking-tight">What matters tonight</h2>
             <p className="mt-2 text-sm leading-relaxed text-muted">
-              An AI-assisted desk note built from today&apos;s board and source-linked headlines. It is a starting point, not a replacement for the original reporting.
+              A quick read on the teams, games, and stories shaping the day across the commonwealth.
             </p>
             <div className="mt-3 rounded-sm border border-border bg-elevated/50 p-3 text-xs text-muted">
               <p className="font-semibold uppercase tracking-wider text-subtle">Source check</p>
@@ -460,13 +463,13 @@ function TodayPage() {
               </Button>
             ) : (
               <p className="mt-4 border-t border-border pt-4 text-sm text-muted">
-                The recap desk is currently unavailable. Browse the source-linked headlines above for today&apos;s context.
+                The desk is watching tonight&apos;s board. Browse the source-linked headlines above for today&apos;s context.
               </p>
             )}
             {briefError ? <p className="mt-3 text-sm text-danger">{briefError}</p> : null}
             {brief ? (
               <div className="mt-4 space-y-3 border-t border-border pt-4 text-sm leading-relaxed text-fg">
-                <p className="text-xs font-semibold uppercase tracking-wider text-accent">Desk note · generated for {formatLongDate(date)}</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-accent">Desk note · {formatLongDate(date)}</p>
                 {brief.split(/\n\n+/).map((para) => (
                   <p key={para.slice(0, 24)}>{para}</p>
                 ))}
