@@ -456,14 +456,14 @@ function TodayPage() {
               <p className="font-semibold uppercase tracking-wider text-subtle">Source check</p>
               <p className="mt-1">{games.length} game{games.length === 1 ? "" : "s"} on the board · {rankedNews.length} headline{rankedNews.length === 1 ? "" : "s"} available{takeSources.length ? ` · ${takeSources.join(", ")}` : ""}</p>
             </div>
-            {aiAccess.aiEnabled ? (
-              <Button className="mt-4 w-full" onClick={() => void runBrief()} disabled={busy || !aiAccess.signedIn}>
+            {aiAccess.aiEnabled && aiAccess.signedIn ? (
+              <Button className="mt-4 w-full" onClick={() => void runBrief()} disabled={busy}>
                 <PenLine className="h-4 w-4" />
-                {busy ? "Writing…" : !aiAccess.signedIn ? "Sign in to write the recap" : "Write the recap"}
+                {busy ? "Writing…" : "Write the recap"}
               </Button>
             ) : (
               <p className="mt-4 border-t border-border pt-4 text-sm text-muted">
-                The desk is watching tonight&apos;s board. Browse the source-linked headlines above for today&apos;s context.
+                The desk is watching tonight&apos;s board. Check back after the games for the local angle.
               </p>
             )}
             {briefError ? <p className="mt-3 text-sm text-danger">{briefError}</p> : null}
