@@ -92,6 +92,25 @@ test('loadToday uses single-day ESPN scoreboards and schedule fallbacks', async 
   assert(urls.some(u => String(u).includes('/schedule')));
 });
 
+test('recap board avoids schedule and future-odds fan-out', async () => {
+  const urls = [];
+  const fetch = async url => {
+    urls.push(String(url));
+    const body = { events: [], dates: [] };
+    const raw = JSON.stringify(body);
+    return { ok: true, status: 200, json: async () => body, text: async () => raw };
+  };
+  const server = moduleFunctions('src/lib/sports/server.ts', ['loadRecapBoard'], { SportsCache, ...identity, ...time, ...teams, ...briefs, ...providers, fetch });
+  await server.loadRecapBoard('2026-09-10');
+
+  const scoreboardUrls = urls.filter(u => u.includes('/scoreboard'));
+  assert.equal(scoreboardUrls.length, 5);
+  assert(scoreboardUrls.every(u => new URL(u).searchParams.get('dates') === '20260910'));
+  assert.equal(urls.filter(u => u.includes('statsapi.mlb.com/api/v1/schedule')).length, 1);
+  assert(!urls.some(u => u.includes('/schedule') && !u.includes('statsapi.mlb.com')));
+  assert(urls.length <= 6);
+});
+
 test('week odds supplement never sends an ESPN date range', async () => {
   const urls = [];
   const fetch = async url => {
