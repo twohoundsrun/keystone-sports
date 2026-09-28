@@ -733,6 +733,24 @@ export async function loadToday(date?: string) {
     return { ...board, ...freshness(board.games, [...scores.warnings, ...mlb.warnings]) };
   }, 5 * 60_000);
 }
+/**
+ * Recap generation only needs the selected day's PA results.
+ * Keep this path intentionally small: selected-day scoreboards plus the MLB
+ * schedule fallback. Do not fan out into PA team schedules or future odds.
+ */
+export async function loadRecapBoard(date?: string) {
+  const day = checkedDate(date);
+  return cached(`recap-day:${day}`, 20_000, async () => {
+    const [scores, mlb] = await Promise.all([
+      scoreboardDate(day),
+      safeMlb(day, day),
+    ]);
+    const games = mergeGames(mlb.games, scores.games);
+    const board = sliceToday(day, games);
+    return { ...board, ...freshness(board.games, [...scores.warnings, ...mlb.warnings]) };
+  }, 5 * 60_000);
+}
+
 export async function loadMonth(month?: string) {
   const m = month ?? dateKeyNY().slice(0, 7);
   checkedDate(`${m}-01`);
@@ -1424,7 +1442,7 @@ export async function autoRecapDraft(date?: string): Promise<{ ok: true; id: str
   try {
     const existing = await db().prepare("SELECT id FROM posts WHERE author_id = 'auto' AND kind = 'recap' AND date = ?").bind(day).first();
     if (existing) return { ok: false, error: `A recap draft already exists for ${day}. Review it in the Publisher dashboard.` };
-    const board = await loadToday(day);
+    const board = await loadRecapBoard(day);
     if (board.warnings?.length) return { ok: false, error: "Feeds are delayed. The recap was skipped — no draft was created." };
     const games = applyView([...board.games, ...board.upcoming.slice(0, 6)], "all", "all", [], true);
     const news = await loadNews();
