@@ -21,6 +21,7 @@ function pendingItem(overrides = {}) {
     id: 'beat-test',
     category: 'from_the_beat',
     approvalStatus: 'pending',
+    context: 'A verified local consequence for Pennsylvania fans.',
     expiresAt: undefined,
     approvedBy: undefined,
     approvedAt: undefined,
@@ -40,6 +41,12 @@ test('Approve transitions a pending Beat item and records the Access owner', asy
   assert.equal(item.approvalStatus, 'approved');
   assert.equal(item.approvedBy, 'access:owner@example.com');
   assert.match(item.approvedAt, /^\d{4}-\d{2}-\d{2}T/);
+});
+
+test('Approve refuses an item without Keystone context', async () => {
+  const item = pendingItem({ context: '' });
+  const mutate = loadMutation(async () => item, async () => { throw Error('Should not write'); });
+  await assert.rejects(mutate({}, 'access:owner@example.com', { id: item.id, action: 'approve' }), /Pennsylvania fans/);
 });
 
 test('Reject hides a Beat item and clears prior approval metadata', async () => {

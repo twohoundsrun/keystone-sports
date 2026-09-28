@@ -85,6 +85,12 @@ function TeamPage() {
     .slice(0, 8);
   const recent = games.filter((g) => g.status === "post").slice(-6).reverse();
   const next = upcoming.find((g) => g.status === "pre") ?? upcoming[0];
+  const teamArticles = page?.articles ?? [];
+  const recentArticles = teamArticles.filter((a) => {
+    const age = Date.now() - Date.parse(a.published);
+    return Number.isFinite(age) && age >= 0 && age <= 72 * 60 * 60_000;
+  });
+  const displayedArticles = recentArticles.length ? recentArticles : teamArticles.slice(0, 5);
 
   return (
     <>
@@ -199,17 +205,18 @@ function TeamPage() {
           ) : null}
         </div>
         <aside className="space-y-10">
-          {(page?.articles ?? []).length ? (
+          {displayedArticles.length ? (
             <div>
-              <h2 className="font-display text-2xl tracking-wide">Beat</h2>
+              <h2 className="font-display text-2xl tracking-wide">{recentArticles.length ? "Recent team coverage" : "Team coverage archive"}</h2>
+              {!recentArticles.length ? <p className="mt-1 text-sm text-muted">No new team coverage in the last 72 hours.</p> : null}
               <ul className="mt-4 space-y-4">
-                {(page?.articles ?? []).map((a) => (
+                {displayedArticles.map((a) => (
                   <li key={a.id}>
                     <a href={a.href} target="_blank" rel="noreferrer" className="hover:text-accent">
                       <p className="text-sm font-semibold leading-snug">{a.headline}</p>
                     </a>
                     <p className="mt-1 text-xs uppercase tracking-wider text-subtle">
-                      {a.published ? relativeWhen(a.published) : ""}
+                      {a.source || "External coverage"}{a.published ? ` · Published ${relativeWhen(a.published)}` : " · Publication time unavailable"}
                     </p>
                   </li>
                 ))}

@@ -16,14 +16,16 @@ import { RouteError } from "@/components/route-error";
 import { TeamRail } from "@/components/team-rail";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { TEAM_BY_SLUG } from "@/data/teams";
 import { getNewsFeed, getTodayBoard, generateBrief } from "@/lib/sports/api";
 import { rememberBoard } from "@/lib/sports/board-cache";
+import { uniqueGames } from "@/lib/sports/identity";
 import { useFollows } from "@/lib/sports/follow-store";
 import { applyView, featuredLabel, humanKicker, isFollowedGame, pickFeatured, rankPaNews } from "@/lib/sports/filter";
 import { parseRegion, readPrefs, writePrefs } from "@/lib/sports/prefs";
 import { addDays, dateKeyNY, formatKick, formatLongDate, relativeWhen } from "@/lib/sports/time";
 import type { NewsItem } from "@/lib/sports/types";
+import { getBeatDesk } from "@/lib/beat/api";
+import { homeStories } from "@/lib/sports/home-stories";
 import { cn } from "@/lib/utils";
 import { socialMeta } from "@/lib/seo";
 
@@ -38,11 +40,12 @@ export const Route = createFileRoute("/")({
   loaderDeps: ({ search }) => ({ date: search.date }),
   loader: async ({ deps }) => {
     const board = await getTodayBoard({ data: { date: deps.date } });
-    const [posts, news] = await Promise.all([
+    const [posts, news, beat] = await Promise.all([
       getPublishedPosts({ data: { date: board.date } }).catch(() => [] as Post[]),
       getNewsFeed().catch(() => ({ articles: [] as NewsItem[] })),
+      getBeatDesk().catch(() => null),
     ]);
-    return { board, posts, news };
+    return { board, posts, news, beat };
   },
   staleTime: 20_000,
   pendingComponent: PendingScreen,
@@ -60,6 +63,7 @@ function TodayPage() {
   const loader = Route.useLoaderData();
   const [board, setBoard] = useState(loader.board);
   const [news, setNews] = useState<{ articles: NewsItem[] }>(loader.news ?? { articles: [] });
+  const [beat, setBeat] = useState(loader.beat);
   const [brief, setBrief] = useState<string | null>(null);
   const [briefError, setBriefError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -83,6 +87,7 @@ function TodayPage() {
 
   useEffect(() => {
     if (loader.news) setNews(loader.news);
+    setBeat(loader.beat);
   }, [loader]);
 
   useEffect(() => {
@@ -107,6 +112,16 @@ function TodayPage() {
     }, 60_000);
     return () => { active = false; clearInterval(t); };
   }, [date]);
+
+  useEffect(() => {
+    let active = true;
+    const t = setInterval(() => {
+      if (document.hidden) return;
+      void getNewsFeed().then((value) => { if (active) setNews(value); }).catch(() => {});
+      void getBeatDesk().then((value) => { if (active) setBeat(value); }).catch(() => {});
+    }, 5 * 60_000);
+    return () => { active = false; clearInterval(t); };
+  }, []);
 
   useEffect(() => { setBrief(null); setBriefError(null); }, [date, region, sport]);
 
@@ -139,14 +154,15 @@ function TodayPage() {
       : null,
   });
   const rankedNews = useMemo(() => rankPaNews(news.articles, followed), [news.articles, followed]);
-  const lead = rankedNews.find((a) => a.image) ?? rankedNews[0];
-  const moreNews = rankedNews.filter((a) => a.id !== lead?.id).slice(0, 6);
+  const stories = useMemo(() => homeStories(beat?.enabled ? beat.items : [], rankedNews), [beat, rankedNews]);
+  const lead = date === today ? stories[0] : undefined;
+  const moreNews = date === today ? stories.slice(1) : [];
   const takeSources = useMemo(
-    () => Array.from(new Set(rankedNews.map((article) => article.source).filter((source): source is string => Boolean(source)))).slice(0, 4),
-    [rankedNews],
+    () => Array.from(new Set(stories.map((story) => story.source))).slice(0, 4),
+    [stories],
   );
 
-  const weekSource = useMemo(() => [...board.games, ...board.upcoming], [board.games, board.upcoming]);
+  const weekSource = useMemo(() => uniqueGames([...board.games, ...board.upcoming]), [board.games, board.upcoming]);
   const weekGames = useMemo(
     () => applyView(weekSource, region, sport, followed, followHydrated),
     [weekSource, region, sport, followed, followHydrated],
@@ -178,10 +194,11 @@ function TodayPage() {
   async function refresh() {
     setRefreshing(true);
     try {
-      const [b, n] = await Promise.all([getTodayBoard({ data: { date } }), getNewsFeed()]);
+      const [b, n, approved] = await Promise.all([getTodayBoard({ data: { date } }), getNewsFeed(), getBeatDesk().catch(() => null)]);
       rememberBoard(b);
       setBoard(b);
       setNews(n);
+      setBeat(approved);
     } catch {
       setBoard(b => ({ ...b, warnings: ["Could not refresh scores. Please try again."] }));
     } finally {
@@ -320,13 +337,13 @@ function TodayPage() {
                     </a>
                   ) : null}
                   <p className="mt-3 text-xs font-semibold uppercase tracking-wider text-muted">
-                    {TEAM_BY_SLUG[lead.teamSlug ?? ""]?.shortName ?? lead.league}
+                    {lead.approved ? "Approved desk · " : "Source coverage · "}{lead.source}
                     {lead.published ? ` \u00b7 ${relativeWhen(lead.published)}` : ""}
                   </p>
                   <a href={lead.href} target="_blank" rel="noreferrer" className="mt-1 block hover:text-accent">
                     <h2 className="font-serif text-3xl font-black leading-[1.02] tracking-tight sm:text-4xl">{lead.headline}</h2>
                   </a>
-                  {lead.description ? <p className="mt-2 text-sm leading-relaxed text-muted">{lead.description}</p> : null}
+                  {lead.context ? <p className="mt-2 text-sm leading-relaxed text-muted">{lead.context}</p> : null}
                 </article>
               ) : null}
               {feature ? (
@@ -340,6 +357,11 @@ function TodayPage() {
                   </section>
                 </FadeSwap>
               ) : null}
+            </div>
+          ) : null}
+          {date === today && !stories.length ? (
+            <div className="mt-5 border-y border-border py-4 text-sm text-muted" role="status">
+              No current Pennsylvania headline has cleared the desk. The game board and upcoming schedule are below; <Link to="/news" className="font-semibold text-accent hover:underline">browse source coverage</Link>.
             </div>
           ) : null}
           <PublishedUpdates date={date} />
@@ -433,7 +455,7 @@ function TodayPage() {
                     <a href={a.href} target="_blank" rel="noreferrer" className="group block">
                       <p className="text-sm font-semibold leading-snug group-hover:text-accent">{a.headline}</p>
                       <p className="mt-1 text-xs uppercase tracking-wider text-subtle">
-                        {TEAM_BY_SLUG[a.teamSlug ?? ""]?.shortName ?? a.league}
+                        {a.approved ? "Approved desk · " : "Source coverage · "}{a.source}
                         {a.published ? ` \u00b7 ${relativeWhen(a.published)}` : ""}
                       </p>
                     </a>
@@ -454,7 +476,7 @@ function TodayPage() {
             </p>
             <div className="mt-3 rounded-sm border border-border bg-elevated/50 p-3 text-xs text-muted">
               <p className="font-semibold uppercase tracking-wider text-subtle">Source check</p>
-              <p className="mt-1">{games.length} game{games.length === 1 ? "" : "s"} on the board · {rankedNews.length} headline{rankedNews.length === 1 ? "" : "s"} available{takeSources.length ? ` · ${takeSources.join(", ")}` : ""}</p>
+              <p className="mt-1">{games.length} game{games.length === 1 ? "" : "s"} on the board · {stories.length ? `${stories.length} current headline${stories.length === 1 ? "" : "s"} · ${takeSources.join(", ")}` : "No current headline cleared"}</p>
             </div>
             {aiAccess.aiEnabled && aiAccess.signedIn ? (
               <Button className="mt-4 w-full" onClick={() => void runBrief()} disabled={busy}>
