@@ -16,7 +16,7 @@ If Access is unavailable, visitors see a locked message; News RSS + Film Room ar
 
 | Control | Behavior |
 | --- | --- |
-| **Approve** | `pending` → `approved` (+ `approvedBy` / `approvedAt`). Breaking requires `expiresAt`. |
+| **Approve** | `pending` → `approved` (+ `approvedBy` / `approvedAt`). Requires a verified Pennsylvania consequence in context; Breaking also requires `expiresAt`. |
 | **Reject** | Hide from public feed (`rejected`) |
 | **Edit context** | Change Keystone Beat caption / desk note only |
 | **Change category** | Breaking / From the beat / Watch / Locker room / Reaction |

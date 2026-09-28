@@ -38,6 +38,11 @@ test('doubleheaders survive even if both games share a time placeholder', () => 
   assert.equal(identity.sameGame(game, { ...second, source: 'espn' }), false);
   assert.equal(identity.sameGame(game, { ...game, source: 'espn', id: 'other-id' }), true);
 });
+test('duplicate schedule and scoreboard entries collapse despite a shifted start or different ID', () => {
+  const shifted = { ...game, id: 'scoreboard-1', start: '2020-01-01T18:20:00Z' };
+  assert.equal(identity.uniqueGames([game, shifted]).length, 1);
+  assert.equal(identity.sameGame(game, { ...shifted, start: '2020-01-01T21:00:00Z' }), false);
+});
 test('invalid calendar dates and out-of-range dates are rejected', () => {
   assert.equal(time.validDate('2024-02-29'), true);
   for (const value of ['2026-02-29','2026-13-01','bad','2026-09-00']) assert.equal(time.validDate(value), false);

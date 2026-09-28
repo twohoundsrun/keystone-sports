@@ -274,13 +274,13 @@ function BeatEditorPage() {
                   {typeof item.relevanceScore === "number" ? <span>score {item.relevanceScore}</span> : null}
                 </div>
                 <p className="mt-2 font-display text-xl tracking-wide">{item.headline}</p>
-                {item.context ? <p className="mt-1 text-sm text-muted">{item.context}</p> : null}
+                {item.context ? <p className="mt-1 text-sm text-muted">{item.context}</p> : <p className="mt-1 text-sm text-warn">Add the Pennsylvania consequence before approval.</p>}
                 <p className="mt-2 text-xs text-subtle">
                   {item.source} · {item.authorAccount}
                   {item.expiresAt ? ` · expires ${item.expiresAt}` : ""}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Button type="button" size="sm" disabled={busy || item.approvalStatus === "approved"} onClick={() => void run(() => mutateBeatItemViaAccess({ id: item.id, action: "approve", expiresAt: item.expiresAt ?? undefined }), "Approved.")}>
+                  <Button type="button" size="sm" disabled={busy || item.approvalStatus === "approved" || !item.context?.trim()} onClick={() => void run(() => mutateBeatItemViaAccess({ id: item.id, action: "approve", expiresAt: item.expiresAt ?? undefined }), "Approved.")}>
                     Approve
                   </Button>
                   <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void run(() => mutateBeatItemViaAccess({ id: item.id, action: "reject" }), "Rejected.")}>
@@ -295,7 +295,7 @@ function BeatEditorPage() {
                     variant="outline"
                     disabled={busy}
                     onClick={() => {
-                      const next = window.prompt("Keystone context (1–3 sentences)", item.context ?? "");
+                      const next = window.prompt("What changes for Pennsylvania fans? Give the verified consequence in 1–3 sentences.", item.context ?? "");
                       if (next == null) return;
                       void run(() => mutateBeatItemViaAccess({ id: item.id, action: "edit_context", context: next }), "Context updated.");
                     }}
@@ -410,7 +410,7 @@ function BeatEditorPage() {
                 <Input required value={draft.headline} onChange={(e) => setDraft({ ...draft, headline: e.target.value })} />
               </label>
               <label className="block text-sm">
-                Context
+                Keystone context · what changes for PA fans?
                 <Textarea value={draft.context} onChange={(e) => setDraft({ ...draft, context: e.target.value })} rows={3} />
               </label>
               <label className="block text-sm">

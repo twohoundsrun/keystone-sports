@@ -1,6 +1,6 @@
 import { SportsCache } from './cache';
 import { normalizeBookName } from './providers';
-import { sameGame } from './identity';
+import { sameGame, uniqueGames } from './identity';
 import { briefCacheKey, briefFacts, type BriefInput } from './brief';
 import { applyView } from './filter';
 import { MLB_INDEX, TEAMS, TEAM_BY_SLUG, espnLogo, lookupSlug } from "@/data/teams";
@@ -658,12 +658,13 @@ function byStart(a: Game, b: Game): number {
 }
 
 function sliceToday(day: string, games: Game[]) {
+  const distinct = uniqueGames(games);
   return {
     date: day,
     generatedAt: new Date().toISOString(),
-    games: games.filter((g) => g.dateKey === day).sort(byStart),
-    upcoming: games.filter((g) => g.dateKey > day).sort(byStart).slice(0, 60),
-    recent: games
+    games: distinct.filter((g) => g.dateKey === day).sort(byStart),
+    upcoming: distinct.filter((g) => g.dateKey > day).sort(byStart).slice(0, 60),
+    recent: distinct
       .filter((g) => g.dateKey < day)
       .sort(byStart)
       .reverse()

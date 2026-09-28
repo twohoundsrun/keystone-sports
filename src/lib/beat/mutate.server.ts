@@ -30,6 +30,9 @@ export async function mutateBeatItemForAdmin(
 
   const now = new Date().toISOString();
   if (data.action === "approve") {
+    if (!existing.context?.trim()) {
+      throw new Error("Add a Keystone context sentence explaining what this changes for Pennsylvania fans before approving.");
+    }
     if (existing.category === "breaking" && !existing.expiresAt && data.expiresAt == null) {
       throw new Error("Breaking items require an expiration before approve.");
     }
