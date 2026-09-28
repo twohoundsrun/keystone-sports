@@ -5,14 +5,14 @@ import { writeBrief } from './write-brief';
 export async function autoRecapDraft(date?: string): Promise<{ ok: true; id: string; date: string } | { ok: false; error: string }> {
   const day = checkedDate(date);
   const { db } = await import('../publishing/runtime.server');
-  const { loadToday, loadNews } = await import('./server');
+  const { loadRecapBoard, loadNews } = await import('./server');
   try {
     const existing = await db()
       .prepare("SELECT id FROM posts WHERE author_id = 'auto' AND kind = 'recap' AND date = ?")
       .bind(day)
       .first();
     if (existing) return { ok: false, error: `A recap draft already exists for ${day}. Review it in the Publisher dashboard.` };
-    const board = await loadToday(day);
+    const board = await loadRecapBoard(day);
     if (board.warnings?.length) return { ok: false, error: 'Feeds are delayed. The recap was skipped — no draft was created.' };
     const games = applyView([...board.games, ...board.upcoming.slice(0, 6)], 'all', 'all', [], true);
     const finished = games.filter((g) => g.status === 'post');
