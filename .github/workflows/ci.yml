@@ -18,9 +18,30 @@ jobs:
         run: npm ci
       - name: Lint
         run: npm run lint
+      - name: Full test suite
+        run: npm test
       - name: Sports tests
         run: npm run test:sports
       - name: Production build
         run: npm run build
       - name: Typecheck
+        run: npm run typecheck
+
+  beat-jobs:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workers/keystone-beat-jobs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workers/keystone-beat-jobs/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Worker tests
+        run: npm test
+      - name: Worker typecheck
         run: npm run typecheck
