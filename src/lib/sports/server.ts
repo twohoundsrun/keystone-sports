@@ -2,7 +2,6 @@ import { SportsCache } from './cache';
 import { normalizeBookName } from './providers';
 import { sameGame, uniqueGames } from './identity';
 import { briefCacheKey, briefFacts, type BriefInput } from './brief';
-import { applyView } from './filter';
 import { MLB_INDEX, TEAMS, TEAM_BY_SLUG, espnLogo, lookupSlug } from "@/data/teams";
 import type { BuzzItem, Game, GameOdds, GameSide, GameStatus, HighlightItem, NewsItem, StandingsBoard, StandingGroup, StandingsLeague, StandingRow, TeamFormRow } from "./types";
 import { addDays, checkedDate, dateKeyNY, espnDateParam, monthBounds } from "./time";
@@ -35,19 +34,46 @@ async function cached<T>(key: string, ttl: number, fn: () => Promise<T>, stale =
 }
 function peekCached<T>(key: string, maxAge?: number): T | undefined { return sportsCache.peek<T>(key, maxAge); }
 
-async function getJson(url: string, timeoutMs = 10000): Promise<unknown> {
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), timeoutMs);
-  try {
-    const res = await fetch(url, {
-      signal: ctrl.signal,
-      headers: { "User-Agent": UA, Accept: "application/json" },
-    });
-    if (!res.ok) throw new Error(`${res.status} ${url}`);
-    return await res.json();
-  } finally {
-    clearTimeout(t);
+function retryableStatus(status: number): boolean {
+  return status === 408 || status === 425 || status === 429 || status >= 500;
+}
+
+async function fetchWithRetry(
+  url: string,
+  headers: Record<string, string>,
+  timeoutMs: number,
+  attempts = 3,
+): Promise<Response> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { signal: ctrl.signal, headers });
+      if (res.ok) return res;
+      const error = new Error(`${res.status} ${url}`);
+      if (!retryableStatus(res.status) || attempt === attempts - 1) throw error;
+      lastError = error;
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : "";
+      const nonRetryableHttp = /^4\d\d\s/.test(message) && !/^4(08|25|29)\s/.test(message);
+      if (nonRetryableHttp || attempt === attempts - 1) throw error;
+    } finally {
+      clearTimeout(t);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200 * 2 ** attempt));
   }
+  throw lastError instanceof Error ? lastError : new Error(`Fetch failed: ${url}`);
+}
+
+async function getJson(url: string, timeoutMs = 10000): Promise<unknown> {
+  const res = await fetchWithRetry(
+    url,
+    { "User-Agent": UA, Accept: "application/json" },
+    timeoutMs,
+  );
+  return await res.json();
 }
 
 function workersCache(): Cache | null {
@@ -84,56 +110,44 @@ async function getScoreboardJson(url: string, dates?: string, timeoutMs = 10000)
     }
   }
 
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  const res = await fetchWithRetry(
+    url,
+    { "User-Agent": UA, Accept: "application/json" },
+    timeoutMs,
+  );
+  const text = await res.text();
+  let parsed: unknown;
   try {
-    const res = await fetch(url, {
-      signal: ctrl.signal,
-      headers: { "User-Agent": UA, Accept: "application/json" },
-    });
-    if (!res.ok) throw new Error(`${res.status} ${url}`);
-    const text = await res.text();
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      throw new Error(`invalid JSON ${url}`);
-    }
-    if (cache && res.status === 200) {
-      try {
-        await cache.put(
-          cacheKey,
-          new Response(text, {
-            status: 200,
-            headers: {
-              "Content-Type": "application/json",
-              "Cache-Control": `public, max-age=${ttl}`,
-            },
-          }),
-        );
-      } catch {
-        // Cache write is best-effort. Never cache the error path above.
-      }
-    }
-    return parsed;
-  } finally {
-    clearTimeout(t);
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error(`invalid JSON ${url}`);
   }
+  if (cache && res.status === 200) {
+    try {
+      await cache.put(
+        cacheKey,
+        new Response(text, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": `public, max-age=${ttl}`,
+          },
+        }),
+      );
+    } catch {
+      // Cache write is best-effort. Never cache the error path above.
+    }
+  }
+  return parsed;
 }
 
 async function getText(url: string, timeoutMs = 8000): Promise<string> {
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), timeoutMs);
-  try {
-    const res = await fetch(url, {
-      signal: ctrl.signal,
-      headers: { "User-Agent": UA, Accept: "application/rss+xml, application/atom+xml, text/xml, */*" },
-    });
-    if (!res.ok) throw new Error(`${res.status} ${url}`);
-    return await res.text();
-  } finally {
-    clearTimeout(t);
-  }
+  const res = await fetchWithRetry(
+    url,
+    { "User-Agent": UA, Accept: "application/rss+xml, application/atom+xml, text/xml, */*" },
+    timeoutMs,
+  );
+  return await res.text();
 }
 
 function rec(v: unknown): Record<string, unknown> | null {
@@ -586,6 +600,20 @@ function scheduleTeamId(team: { espnLeague: string; espnAbbr: string; espnId: st
   return team.espnId;
 }
 
+async function mapLimitValues<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  async function worker() {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i]);
+    }
+  }
+  const n = Math.min(limit, Math.max(items.length, 1));
+  await Promise.all(Array.from({ length: n }, () => worker()));
+  return out;
+}
+
 async function mapLimit<T>(items: T[], limit: number, fn: (item: T) => Promise<Game[]>): Promise<Game[]> {
   const out: Game[][] = new Array(items.length);
   let next = 0;
@@ -821,7 +849,7 @@ function hubHighlights(): HighlightItem[] {
 }
 
 async function buildNews() {
-  const jobs = TEAMS.map(async (team) => {
+  const teamNews = mapLimitValues(TEAMS, 4, async (team) => {
     const url = `${ESPN}/sports/${team.espnSport}/${team.espnLeague}/news?team=${team.espnId}`;
     try {
       return arr(rec(await cached(`news:${team.slug}`, 5 * 60_000, () => getJson(url)))?.articles)
@@ -833,7 +861,7 @@ async function buildNews() {
     }
   });
   const [chunks, beat] = await Promise.all([
-    timed(Promise.all(jobs), 12000, [] as NewsItem[][]),
+    timed(teamNews, 12000, [] as NewsItem[][]),
     loadBeatArticles(),
   ]);
   const articles = dedupeNews(
@@ -1435,29 +1463,4 @@ export async function loadStandings(leagueKey: StandingsLeague): Promise<Standin
       };
     }
   }, 20 * 60_000);
-}
-
-export async function autoRecapDraft(date?: string): Promise<{ ok: true; id: string; date: string } | { ok: false; error: string }> {
-  const day = checkedDate(date);
-  const { db } = await import("../publishing/runtime.server");
-  try {
-    const existing = await db().prepare("SELECT id FROM posts WHERE author_id = 'auto' AND kind = 'recap' AND date = ?").bind(day).first();
-    if (existing) return { ok: false, error: `A recap draft already exists for ${day}. Review it in the Publisher dashboard.` };
-    const board = await loadRecapBoard(day);
-    if (board.warnings?.length) return { ok: false, error: "Feeds are delayed. The recap was skipped — no draft was created." };
-    const games = applyView([...board.games, ...board.upcoming.slice(0, 6)], "all", "all", [], true);
-    const news = await loadNews();
-    const articles = news.articles.filter((a) => (a.published?.slice(0, 10) ?? "") <= day);
-    const brief = await writeBrief({ date: day, userId: "auto", games, articles });
-    if (!brief.ok) return { ok: false, error: brief.error };
-    const id = crypto.randomUUID();
-    const now = new Date().toISOString();
-    await db()
-      .prepare("INSERT INTO posts (id, author_id, date, kind, title, body, event_time, team_slug, published, updated_at) VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, 0, ?)")
-      .bind(id, "auto", day, "recap", `${day} · Auto recap (draft)`, brief.text, now)
-      .run();
-    return { ok: true, id, date: day };
-  } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "Could not create the recap draft." };
-  }
 }
