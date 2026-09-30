@@ -23,11 +23,14 @@ export async function autoRecapDraft(date?: string): Promise<{ ok: true; id: str
     if (!brief.ok) return { ok: false, error: brief.error };
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
-    await db()
-      .prepare('INSERT INTO posts (id, author_id, date, kind, title, body, event_time, team_slug, published, updated_at) VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, 0, ?)')
+    const inserted = await db()
+      .prepare('INSERT OR IGNORE INTO posts (id, author_id, date, kind, title, body, event_time, team_slug, published, updated_at) VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, 0, ?) RETURNING id')
       .bind(id, 'auto', day, 'recap', `${day} · Auto recap (draft)`, brief.text, now)
-      .run();
-    return { ok: true, id, date: day };
+      .first<{ id: string }>();
+    if (!inserted) {
+      return { ok: false, error: `A recap draft already exists for ${day}. Review it in the Publisher dashboard.` };
+    }
+    return { ok: true, id: inserted.id, date: day };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : 'Could not create the recap draft.' };
   }
