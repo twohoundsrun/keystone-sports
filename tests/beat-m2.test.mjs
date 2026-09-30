@@ -199,13 +199,12 @@ test('candidatesFromEditorialJson scores, dedupes, discards low relevance', () =
   assert.equal(discarded, 1);
 });
 
-test('www apex redirect helpers present in middleware', () => {
-  const nitro = readFileSync('server/middleware/grok-pwa.ts', 'utf8');
-  assert.match(nitro, /www\.keystonebeat\.com/);
-  assert.match(nitro, /keystonebeat\.com/);
-  assert.match(nitro, /301/);
+test('www apex redirect and ingest helpers live in request middleware', () => {
   const api = readFileSync('src/lib/api-middleware.ts', 'utf8');
+  assert.match(api, /canonicalHostRedirect/);
+  assert.match(api, /www\.keystonebeat\.com/);
+  assert.match(api, /keystonebeat\.com/);
+  assert.match(api, /301/);
   assert.match(api, /\/api\/editor\/beat\/ingest/);
   assert.match(api, /KEYSTONE_BEAT_INGEST_SECRET/);
-  assert.match(api, /www\.keystonebeat\.com/);
 });
