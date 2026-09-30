@@ -1,5 +1,4 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
-import { AuthProvider } from "@/lib/auth/provider";
 import { DeskShell } from "@/components/desk-shell";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { DEFAULT_DESCRIPTION, DEFAULT_OG_IMAGE, SITE_URL } from "@/lib/seo";
@@ -49,7 +48,7 @@ export const Route = createRootRoute({
       { rel: "icon", type: "image/png", href: "/brand/two-hounds-mark.png" },
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
       { rel: "stylesheet", href: appCss },
-      { rel: "manifest", href: import.meta.env.VITE_STANDALONE === "true" ? "/manifest.webmanifest" : "/__grok/manifest.webmanifest" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/brand/two-hounds-mark.png" },
       { rel: "canonical", href: SITE_URL },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -68,11 +67,7 @@ export const Route = createRootRoute({
       </head>
       <body className="bg-bg text-fg antialiased">
         {import.meta.env.VITE_STANDALONE !== "true" ? <PreviewHostBridge /> : null}
-        {import.meta.env.VITE_STANDALONE === "true" ? <DeskShell><Outlet /></DeskShell> : <AuthProvider>
-          <DeskShell>
-            <Outlet />
-          </DeskShell>
-        </AuthProvider>}
+        <DeskShell><Outlet /></DeskShell>
         <Scripts />
       </body>
     </html>
