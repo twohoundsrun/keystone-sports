@@ -361,7 +361,13 @@ test('standings label NBA off-season finals from ESPN season types', async () =>
     if (u.includes('group=6')) body = { name: 'Western Conference', children: [], season: payload.season, seasons: payload.seasons };
     return { ok: true, status: 200, json: async () => body };
   };
-  const server = moduleFunctions('src/lib/sports/server.ts', ['loadStandings'], { SportsCache, ...identity, ...time, ...teams, ...briefs, ...providers, fetch });
+  const NativeDate = Date;
+  class FixedDate extends NativeDate {
+    static now() { return NativeDate.parse('2026-09-29T12:00:00Z'); }
+  }
+  const server = moduleFunctions('src/lib/sports/server.ts', ['loadStandings'], {
+    SportsCache, ...identity, ...time, ...teams, ...briefs, ...providers, fetch, Date: FixedDate,
+  });
   const board = await server.loadStandings('nba');
   assert.match(board.seasonNote || '', /season is over|final standings/i);
   assert.equal(board.seasonLabel, '2025-26');
