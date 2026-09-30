@@ -1,6 +1,6 @@
 import { createMiddleware } from '@tanstack/react-start';
 import { runtime } from '@/lib/publishing/runtime.server';
-import { autoRecapDraft } from '@/lib/sports/server';
+import { autoRecapDraft } from '@/lib/sports/auto-recap';
 import {
   RECAP_SECRET_DENIED_ERROR,
   RECAP_SECRET_MISSING_ERROR,
