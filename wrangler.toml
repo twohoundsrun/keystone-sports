@@ -51,4 +51,4 @@ KEYSTONE_BEAT_M1 = "true"
 #   KEYSTONE_ADMIN_EMAIL  (set as a var, below) -> wrangler secret put KEYSTONE_ADMIN_EMAIL if moved to a secret
 
 [triggers]
-crons = ["0 1 * * *"]
+crons = ["0 7 * * *"]
