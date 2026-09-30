@@ -9,17 +9,13 @@
   "scripts": {
     "dev": "vite dev --host 0.0.0.0 --port 8080",
     "build": "vite build --config vite.standalone.config.ts && node scripts/stage-standalone.mjs",
-    "db:migrate": "node scripts/migrate.mjs",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
-    "preview:restart": "node scripts/preview.mjs restart",
-    "preview:stop": "node scripts/preview.mjs stop",
     "typecheck": "tsc --noEmit",
-    "test": "node --test 'scripts/**/*.test.mjs'",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",
     "test:sports": "node --experimental-strip-types --test tests/*.test.mjs",
-    "db:generate": "drizzle-kit generate",
     "beat:seed": "node scripts/beat-seed.mjs",
     "beat:discover": "node scripts/beat-discover.mjs"
   },
