@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { relativeWhen } from "@/lib/sports/time";
+import { leagueFeedLine, type LeagueFeed } from "@/lib/sports/feed-age";
 import { cn } from "@/lib/utils";
 
-export function FeedStatus({ at, warnings = [] }: { at: string; warnings?: string[] }) {
+export function FeedStatus({ at, warnings = [], feeds = [] }: { at: string; warnings?: string[]; feeds?: LeagueFeed[] }) {
   const [spin, setSpin] = useState(false);
   useEffect(() => {
     setSpin(true);
@@ -27,6 +28,7 @@ export function FeedStatus({ at, warnings = [] }: { at: string; warnings?: strin
         </span>
         <span>Data checked {when} · Times Eastern</span>
       </div>
+      {feeds.length ? <p className="mt-1 text-xs text-muted">{leagueFeedLine(feeds)}</p> : null}
       {feedWarnings.length ? (
         <p className="mt-1 text-warn">
           Some feeds unavailable: {feedWarnings.join(" · ")}. Empty results may be incomplete.

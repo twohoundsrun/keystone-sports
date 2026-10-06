@@ -23,7 +23,9 @@ directory = "dist/client"
 binding = "DB"
 database_name = "keystone-sports"
 database_id = "9d1f8f05-10d5-4a1c-87d5-fe038a328540"
-preview_database_id = "9d1f8f05-10d5-4a1c-87d5-fe038a328540"
+# Do not set preview_database_id to the production id. A preview deploy would
+# write the live scores and posts database. Create a separate D1 database and
+# set preview_database_id only after that id exists.
 migrations_dir = "drizzle"
 
 [vars]
@@ -38,6 +40,7 @@ KEYSTONE_BEAT_M1 = "true"
 
 # Secrets (set with wrangler secret put, NOT in this file):
 #   AI_API_KEY  (OpenAI key from platform.openai.com) -> wrangler secret put AI_API_KEY
+#   Cap the OpenAI project at $5 in the dashboard. This file cannot set that cap.
 #   Optional overrides (already set as vars above):
 #     AI_BASE_URL  https://api.openai.com/v1
 #     AI_MODEL     gpt-5-nano  ($0.05 / $0.40 per 1M tokens — cheapest OpenAI chat model)
