@@ -15,7 +15,6 @@
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test:sports": "node --experimental-strip-types --test tests/*.test.mjs",
     "beat:seed": "node scripts/beat-seed.mjs",
     "beat:discover": "node scripts/beat-discover.mjs"
   },
