@@ -66,7 +66,7 @@ function OddsPage() {
           Spreads, totals, and moneylines next to the games — not a sportsbook. Numbers come from ESPN's public
           board. 21+.
         </p>
-        <FeedStatus at={board.generatedAt} warnings={board.warnings} />
+        <FeedStatus at={board.generatedAt} warnings={board.warnings} feeds={board.feeds} />
         <div className="mt-6">
           <FilterChips
             region={region}

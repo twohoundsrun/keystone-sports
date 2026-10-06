@@ -20,10 +20,10 @@ jobs:
         run: npm run lint
       - name: Full test suite
         run: npm test
-      - name: Sports tests
-        run: npm run test:sports
       - name: Production build
         run: npm run build
+      - name: Built output has no debug route
+        run: node scripts/assert-no-debug-route.mjs
       - name: Typecheck
         run: npm run typecheck
 

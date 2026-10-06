@@ -1,3 +1,5 @@
+import type { LeagueFeed } from "./feed-age";
+
 export type GameStatus = "pre" | "in" | "post";
 
 export type GameSide = {
@@ -78,6 +80,7 @@ export type TodayBoard = {
   date: string;
   generatedAt: string;
   warnings?: string[];
+  feeds?: LeagueFeed[];
   games: Game[];
   upcoming: Game[];
   recent: Game[];

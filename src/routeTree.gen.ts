@@ -18,7 +18,6 @@ import { Route as NewsRouteImport } from './routes/news'
 import { Route as OddsRouteImport } from './routes/odds'
 import { Route as StandingsRouteImport } from './routes/standings'
 import { Route as ApiAutoRecapRouteImport } from './routes/api/auto-recap'
-import { Route as ApiStandingsDebugRouteImport } from './routes/api/standings-debug'
 import { Route as EditorBeatRouteImport } from './routes/editor_.beat'
 import { Route as TeamsIndexRouteImport } from './routes/teams/index'
 import { Route as TeamsSlugRouteImport } from './routes/teams/$slug'
@@ -68,11 +67,6 @@ const ApiAutoRecapRoute = ApiAutoRecapRouteImport.update({
   path: '/api/auto-recap',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiStandingsDebugRoute = ApiStandingsDebugRouteImport.update({
-  id: '/api/standings-debug',
-  path: '/api/standings-debug',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const EditorBeatRoute = EditorBeatRouteImport.update({
   id: '/editor_/beat',
   path: '/editor/beat',
@@ -99,7 +93,6 @@ export interface FileRoutesByFullPath {
   '/odds': typeof OddsRoute
   '/standings': typeof StandingsRoute
   '/api/auto-recap': typeof ApiAutoRecapRoute
-  '/api/standings-debug': typeof ApiStandingsDebugRoute
   '/editor/beat': typeof EditorBeatRoute
   '/teams/$slug': typeof TeamsSlugRoute
   '/teams/': typeof TeamsIndexRoute
@@ -114,7 +107,6 @@ export interface FileRoutesByTo {
   '/odds': typeof OddsRoute
   '/standings': typeof StandingsRoute
   '/api/auto-recap': typeof ApiAutoRecapRoute
-  '/api/standings-debug': typeof ApiStandingsDebugRoute
   '/editor/beat': typeof EditorBeatRoute
   '/teams/$slug': typeof TeamsSlugRoute
   '/teams': typeof TeamsIndexRoute
@@ -130,7 +122,6 @@ export interface FileRoutesById {
   '/odds': typeof OddsRoute
   '/standings': typeof StandingsRoute
   '/api/auto-recap': typeof ApiAutoRecapRoute
-  '/api/standings-debug': typeof ApiStandingsDebugRoute
   '/editor_/beat': typeof EditorBeatRoute
   '/teams/$slug': typeof TeamsSlugRoute
   '/teams/': typeof TeamsIndexRoute
@@ -147,7 +138,6 @@ export interface FileRouteTypes {
     | '/odds'
     | '/standings'
     | '/api/auto-recap'
-    | '/api/standings-debug'
     | '/editor/beat'
     | '/teams/$slug'
     | '/teams/'
@@ -162,7 +152,6 @@ export interface FileRouteTypes {
     | '/odds'
     | '/standings'
     | '/api/auto-recap'
-    | '/api/standings-debug'
     | '/editor/beat'
     | '/teams/$slug'
     | '/teams'
@@ -177,7 +166,6 @@ export interface FileRouteTypes {
     | '/odds'
     | '/standings'
     | '/api/auto-recap'
-    | '/api/standings-debug'
     | '/editor_/beat'
     | '/teams/$slug'
     | '/teams/'
@@ -193,7 +181,6 @@ export interface RootRouteChildren {
   OddsRoute: typeof OddsRoute
   StandingsRoute: typeof StandingsRoute
   ApiAutoRecapRoute: typeof ApiAutoRecapRoute
-  ApiStandingsDebugRoute: typeof ApiStandingsDebugRoute
   EditorBeatRoute: typeof EditorBeatRoute
   TeamsSlugRoute: typeof TeamsSlugRoute
   TeamsIndexRoute: typeof TeamsIndexRoute
@@ -264,13 +251,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAutoRecapRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/standings-debug': {
-      id: '/api/standings-debug'
-      path: '/api/standings-debug'
-      fullPath: '/api/standings-debug'
-      preLoaderRoute: typeof ApiStandingsDebugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/editor_/beat': {
       id: '/editor_/beat'
       path: '/editor/beat'
@@ -305,7 +285,6 @@ const rootRouteChildren: RootRouteChildren = {
   OddsRoute: OddsRoute,
   StandingsRoute: StandingsRoute,
   ApiAutoRecapRoute: ApiAutoRecapRoute,
-  ApiStandingsDebugRoute: ApiStandingsDebugRoute,
   EditorBeatRoute: EditorBeatRoute,
   TeamsSlugRoute: TeamsSlugRoute,
   TeamsIndexRoute: TeamsIndexRoute,
