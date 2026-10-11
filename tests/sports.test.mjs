@@ -16,6 +16,18 @@ const teams = moduleFunctions('src/data/teams.ts', ['TEAMS', 'TEAM_BY_SLUG', 'ES
 const providers = moduleFunctions('src/lib/sports/providers.ts', ['normalizeBookName', 'normalizeProvider', 'canonicalizeProvider']);
 const game = { id: '1', espnLeague: 'mlb', source: 'mlb', dateKey: '2020-01-01', start: '2020-01-01T18:00:00Z', name: 'Philadelphia at Pittsburgh', shortName: 'PHI @ PIT', statusText: 'Final', gameNumber: 1, away: { abbr: 'PHI', name: 'Philadelphia', score: '5' }, home: { abbr: 'PIT', name: 'Pittsburgh', score: '2' } };
 
+// Deterministic clock for tests that branch on the current date. Shadows the
+// global Date inside a moduleFunctions-built module (both `new Date()` and
+// `Date.now()` resolve to the pinned instant).
+function fixedClock(iso) {
+  const pin = Date.parse(iso);
+  class FixedDate extends Date {
+    constructor(...args) { if (args.length === 0) super(pin); else super(...args); }
+    static now() { return pin; }
+  }
+  return FixedDate;
+}
+
 test('cache serves bounded stale data on failure and never resets its original fetch time', async () => {
   let now = 0; const c = new SportsCache(() => now);
   await c.get('score', 10, async () => ['5-2']); now = 15;
@@ -140,7 +152,12 @@ test('calendar month uses PA schedules and a single-day scoreboard for the curre
     const raw = JSON.stringify(body);
     return { ok: true, status: 200, json: async () => body, text: async () => raw };
   };
-  const server = moduleFunctions('src/lib/sports/server.ts', ['loadMonth'], { SportsCache, ...identity, ...time, ...teams, ...briefs, ...providers, fetch });
+  // Pin "today" inside the requested month: loadMonth only adds a single-day
+  // scoreboard when the requested month equals the current NY month, so the
+  // assertion must not depend on the wall clock.
+  const FixedDate = fixedClock('2026-09-15T12:00:00Z');
+  const fixedTime = moduleFunctions('src/lib/sports/time.ts', ['validDate', 'checkedDate', 'addDays', 'dateKeyNY', 'espnDateParam', 'monthBounds'], { Date: FixedDate });
+  const server = moduleFunctions('src/lib/sports/server.ts', ['loadMonth'], { SportsCache, ...identity, ...fixedTime, ...teams, ...briefs, ...providers, fetch, Date: FixedDate });
   await server.loadMonth('2026-09');
   const scoreboardUrls = urls.filter(u => u.includes('/scoreboard'));
   assert(scoreboardUrls.length > 0);

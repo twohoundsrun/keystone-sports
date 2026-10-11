@@ -1,6 +1,6 @@
 # Keystone Beat outside Grok
 
-The default build runs Keystone Beat as a Cloudflare module Worker on Sites. It does not require the Grok preview host or a Grok subscription. The original Grok configuration is retained as `npm run build:grok`.
+The default build runs Keystone Beat as a Cloudflare module Worker on Sites. It does not require the Grok preview host or a Grok subscription. A separate `vite.config.ts` is retained for local dev/preview (nitro `vercel` preset); the production build uses `vite.standalone.config.ts`.
 
 ## Using the site
 
@@ -27,4 +27,4 @@ The independent configuration is `vite.standalone.config.ts`; deployable output 
 
 ## Verification and limits
 
-Eight targeted regression tests cover cache expiry, empty results, request coalescing, doubleheaders, dates, recap fact isolation, historical score requests, owner authorization, and calendar formatting. Type checking and a production build pass. Production Worker HTTP rendering was checked with fixture feeds and an in-memory database. This is not a live-feed, browser-layout, or paid xAI integration test. Feed availability, statistics, broadcasts, and odds vary by league and provider. Delay indicators show when upstream retrieval fails.
+The `tests/` suite covers cache expiry, empty results, request coalescing, doubleheaders, dates, recap fact isolation, historical score requests, owner authorization, calendar formatting, and Beat ingest hardening. Type checking and a production build pass. Production Worker HTTP rendering was checked with fixture feeds and an in-memory database. This is not a live-feed, browser-layout, or paid xAI integration test. Feed availability, statistics, broadcasts, and odds vary by league and provider. Delay indicators show when upstream retrieval fails.
