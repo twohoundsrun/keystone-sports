@@ -11,15 +11,37 @@ function moduleFunctions(path, names, deps = {}) {
   return new Function(...Object.keys(deps), code + `\nreturn {${names.join(',')}};`)(...Object.values(deps));
 }
 
-function loadMutation(getBeatItemById, patchBeatItem) {
+/**
+ * A fixed clock usable as a drop-in `Date` replacement. Extending `Date` keeps
+ * `Date.parse`, `new Date(iso)`, and `new Date().toISOString()` working, while
+ * `new Date()` and `Date.now()` are pinned to `ms`. When the loader is called
+ * without a clock it injects the real global `Date`, so production behavior is
+ * never altered.
+ */
+function fixedClock(now) {
+  if (!now) return Date;
+  const ms = now instanceof Date ? now.getTime() : Number(now);
+  return class FixedDate extends Date {
+    constructor(...args) {
+      if (args.length === 0) super(ms);
+      else super(...args);
+    }
+    static now() {
+      return ms;
+    }
+  };
+}
+
+function loadMutation(getBeatItemById, patchBeatItem, now) {
   let code = stripTypeScriptTypes(readFileSync('src/lib/beat/mutate.server.ts', 'utf8'), { mode: 'transform' });
   code = code.replace(/^import\s+type[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, '');
   code = code.replace(/^import\s+[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, '');
   code = code.replace(/\bexport /g, '');
-  return new Function('z', 'getBeatItemById', 'patchBeatItem', `${code}\nreturn { mutateBeatItemForAdmin };`)(
+  return new Function('z', 'getBeatItemById', 'patchBeatItem', 'Date', `${code}\nreturn { mutateBeatItemForAdmin };`)(
     z,
     getBeatItemById,
     patchBeatItem,
+    fixedClock(now),
   ).mutateBeatItemForAdmin;
 }
 
@@ -116,7 +138,7 @@ test('approve refuses a past expiration and requires an explicit future one', as
     expiresAt: hoursAgo(2),
   };
   let writes = 0;
-  const mutate = loadMutation(async () => item, async () => { writes += 1; });
+  const mutate = loadMutation(async () => item, async () => { writes += 1; }, NOW);
   await assert.rejects(
     mutate({}, 'access:owner@example.com', { id: item.id, action: 'approve' }),
     /already in the past|future expiration/i,
@@ -135,6 +157,7 @@ test('approve persists a future expiration supplied for a past-due pending card'
   const mutate = loadMutation(
     async () => item,
     async (_database, _id, patch) => { item = { ...item, ...patch }; },
+    NOW,
   );
   const future = hoursAhead(6);
   const result = await mutate({}, 'access:owner@example.com', { id: item.id, action: 'approve', expiresAt: future });
@@ -155,6 +178,7 @@ test('approve keeps a still-valid future expiration when none is supplied', asyn
   const mutate = loadMutation(
     async () => item,
     async (_database, _id, patch) => { item = { ...item, ...patch }; },
+    NOW,
   );
   await mutate({}, 'access:owner@example.com', { id: item.id, action: 'approve' });
   assert.equal(item.approvalStatus, 'approved');
@@ -169,9 +193,46 @@ test('approve still requires an expiration for Breaking items', async () => {
     context: 'A verified local consequence for Pennsylvania fans.',
     expiresAt: undefined,
   };
-  const mutate = loadMutation(async () => item, async () => { throw Error('Should not write'); });
+  const mutate = loadMutation(async () => item, async () => { throw Error('Should not write'); }, NOW);
   await assert.rejects(
     mutate({}, 'access:owner@example.com', { id: item.id, action: 'approve' }),
     /Breaking items require an expiration/i,
+  );
+});
+
+// Regression: the approval-expiration decision must derive from the injected
+// clock, never the real execution date. The same card is approved when the
+// clock sits before its expiration and rejected when the clock sits after,
+// independent of when this suite actually runs.
+test('approval expiration validation follows the injected clock, not the wall clock', async () => {
+  const expiresAt = '2031-06-01T00:00:00.000Z';
+  const makeItem = () => ({
+    id: 'beat-clock',
+    category: 'from_the_beat',
+    approvalStatus: 'pending',
+    context: 'A verified local consequence for Pennsylvania fans.',
+    expiresAt,
+  });
+
+  const beforeExpiry = new Date('2031-05-31T23:59:00.000Z');
+  let stored = makeItem();
+  const approveBefore = loadMutation(
+    async () => makeItem(),
+    async (_database, _id, patch) => { stored = { ...stored, ...patch }; },
+    beforeExpiry,
+  );
+  await approveBefore({}, 'access:owner@example.com', { id: 'beat-clock', action: 'approve' });
+  assert.equal(stored.approvalStatus, 'approved');
+  assert.equal(stored.expiresAt, expiresAt);
+
+  const afterExpiry = new Date('2031-06-01T00:00:01.000Z');
+  const approveAfter = loadMutation(
+    async () => makeItem(),
+    async () => { throw Error('must not write'); },
+    afterExpiry,
+  );
+  await assert.rejects(
+    approveAfter({}, 'access:owner@example.com', { id: 'beat-clock', action: 'approve' }),
+    /already in the past|future expiration/i,
   );
 });
