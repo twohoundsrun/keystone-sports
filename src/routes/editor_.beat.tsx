@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { TEAMS } from "@/data/teams";
+import { beatPendingStaleness, formatBeatAge } from "@/lib/beat/staleness";
 
 type SiteAccess = {
   signedIn: boolean;
@@ -260,7 +261,9 @@ function BeatEditorPage() {
             <p className="mt-3 text-sm text-muted">No items in this filter. Seed with <code>npm run beat:seed</code> or add a URL below.</p>
           ) : null}
           <ul className="mt-4 space-y-4">
-            {visible.map((item) => (
+            {visible.map((item) => {
+              const staleness = beatPendingStaleness(item);
+              return (
               <li key={item.id} className="rounded-md bg-surface p-4 shadow-[var(--shadow-border)]">
                 <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted">
                   <span>{BEAT_CATEGORY_LABELS[item.category]}</span>
@@ -271,12 +274,21 @@ function BeatEditorPage() {
                   <span>·</span>
                   <span>{SOURCE_TIER_LABELS[item.sourceTier]}</span>
                   {item.pinned ? <span className="rounded-sm bg-accent px-1.5 py-0.5 text-accent-fg">Pinned</span> : null}
+                  {staleness.stale ? (
+                    <span
+                      className="rounded-sm bg-warn/15 px-1.5 py-0.5 text-warn"
+                      title={staleness.reason === "expired" ? "Expiration passed while still pending" : "Pending review for over 48 hours"}
+                    >
+                      Stale
+                    </span>
+                  ) : null}
                   {typeof item.relevanceScore === "number" ? <span>score {item.relevanceScore}</span> : null}
                 </div>
                 <p className="mt-2 font-display text-xl tracking-wide">{item.headline}</p>
                 {item.context ? <p className="mt-1 text-sm text-muted">{item.context}</p> : <p className="mt-1 text-sm text-warn">Add the Pennsylvania consequence before approval.</p>}
                 <p className="mt-2 text-xs text-subtle">
                   {item.source} · {item.authorAccount}
+                  {item.approvalStatus === "pending" ? ` · pending ${formatBeatAge(staleness.ageMs)}` : ""}
                   {item.expiresAt ? ` · expires ${item.expiresAt}` : ""}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -363,7 +375,8 @@ function BeatEditorPage() {
                   </a>
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </section>
 

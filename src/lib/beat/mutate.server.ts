@@ -33,14 +33,24 @@ export async function mutateBeatItemForAdmin(
     if (!existing.context?.trim()) {
       throw new Error("Add a Keystone context sentence explaining what this changes for Pennsylvania fans before approving.");
     }
-    if (existing.category === "breaking" && !existing.expiresAt && data.expiresAt == null) {
+    const effectiveExpiresAt =
+      data.expiresAt !== undefined ? data.expiresAt : existing.expiresAt ?? null;
+    if (existing.category === "breaking" && !effectiveExpiresAt) {
       throw new Error("Breaking items require an expiration before approve.");
+    }
+    if (effectiveExpiresAt) {
+      const expiresMs = Date.parse(effectiveExpiresAt);
+      if (!Number.isFinite(expiresMs) || expiresMs <= Date.now()) {
+        throw new Error(
+          "This card's expiration is already in the past. Set a future expiration, then approve.",
+        );
+      }
     }
     await patchBeatItem(database, data.id, {
       approvalStatus: "approved",
       approvedBy: adminId,
       approvedAt: now,
-      expiresAt: data.expiresAt !== undefined ? data.expiresAt : existing.expiresAt ?? null,
+      expiresAt: effectiveExpiresAt,
     });
   } else if (data.action === "reject") {
     await patchBeatItem(database, data.id, {
