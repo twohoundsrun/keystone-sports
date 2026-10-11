@@ -114,11 +114,23 @@ files. Never create a `.env` file or commit keys.
 - Do not change production data, Cloudflare settings, secrets, or auth behavior as
   part of routine maintenance.
 
-## Known gap: Drizzle snapshots
+## Out-of-band migrations & Drizzle snapshots
 
-`drizzle/meta/_journal.json` lists migrations `0003_beat_job_runs` and
-`0004_beat_fingerprint_unique`, but their `0003_snapshot.json` / `0004_snapshot.json`
-are missing. Runtime `wrangler d1 migrations apply` is unaffected (it reads the
-`.sql` files), but `drizzle-kit generate` will mis-diff against the stale `0002`
-snapshot. Do not fix this by editing history in place; regenerate snapshots in an
-isolated copy and review before changing anything here.
+`drizzle/meta/_journal.json` lists `0003_beat_job_runs` and `0004_beat_fingerprint_unique`,
+but `0003_snapshot.json` / `0004_snapshot.json` do not exist. This is **intentional, not a
+defect**: both are out-of-band (custom) SQL migrations whose objects are *not* declared in
+`db/schema.ts` — the `beat_job_runs` table (owned by the jobs Worker via raw SQL,
+`workers/keystone-beat-jobs/src/metrics.ts`) and the partial unique index
+`beat_items_duplicate_fingerprint_unique`. Drizzle snapshots are derived *solely* from the
+schema files, so no `drizzle-kit`-generated snapshot can represent these objects; writing
+placeholder snapshots would be misleading.
+
+Verified against `drizzle-kit` 0.31.10: `drizzle-kit check` passes, `drizzle-kit generate`
+is a no-op, forward diffs off the `0002` snapshot are correct, and `drizzle-kit up` does not
+backfill the missing snapshots. Runtime `wrangler d1 migrations apply` is unaffected (it
+reads the `.sql` files).
+
+Do **not** hand-write `0003`/`0004` snapshots. If either object is ever brought into
+`db/schema.ts`, `drizzle-kit generate` will emit duplicate `CREATE TABLE` / index
+operations for it — reconcile that first. `tests/drizzle-migrations.test.mjs` pins the
+out-of-band allowlist and asserts these objects stay out of `db/schema.ts`.
