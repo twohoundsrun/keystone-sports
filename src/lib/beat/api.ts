@@ -5,6 +5,9 @@ import { selectPublicBeatItems } from "./order";
 import { readBeatM1Flag } from "./flag";
 import { classifyBeatMedia, normalizeBeatUrl } from "./allowlist";
 import { beatDuplicateFingerprint } from "./fingerprint";
+import { isBeatUniquenessConflict } from "./ingest-errors";
+import { BEAT_QUEUE_DEFAULT_LIMIT, type BeatQueueCounts, type BeatQueueStatus } from "./queue";
+import { unavailableBeatDiagnostics, type BeatQueueDiagnostics } from "./diagnostics";
 
 export type BeatDeskPayload = {
   enabled: boolean;
@@ -13,6 +16,12 @@ export type BeatDeskPayload = {
   /** Admin desk rows from D1 (pending + approved + rejected). Fixtures never appear here in prod. */
   adminItems?: BeatItem[];
   source: "d1" | "empty";
+  /** Server-side queue metadata. Only ever set on trusted admin responses. */
+  adminStatus?: BeatQueueStatus;
+  adminNextCursor?: string | null;
+  adminLimit?: number;
+  adminCounts?: BeatQueueCounts;
+  adminDiagnostics?: BeatQueueDiagnostics;
 };
 
 const categorySchema = z.enum(["breaking", "from_the_beat", "watch", "locker_room", "reaction"]);
@@ -67,21 +76,49 @@ export const getBeatAdminDesk = createServerFn({ method: "GET" }).handler(async 
   const enabled = readBeatM1Flag(runtime() as unknown as Record<string, unknown>);
   const database = await tryDb();
   if (!database) {
-    return { enabled, generatedAt, items: [], adminItems: [], source: "empty" };
-  }
-  try {
-    const { listBeatItems, listPublicBeatRows } = await import("./db.server");
-    const adminItems = await listBeatItems(database);
-    const publicRows = await listPublicBeatRows(database);
     return {
       enabled,
       generatedAt,
-      items: selectPublicBeatItems(publicRows),
-      adminItems,
+      items: [],
+      adminItems: [],
+      source: "empty",
+      adminStatus: "pending",
+      adminNextCursor: null,
+      adminDiagnostics: unavailableBeatDiagnostics(),
+    };
+  }
+  try {
+    const { listBeatItemsPage, countBeatItemsByStatus, getBeatQueueDiagnostics } = await import("./db.server");
+    const now = new Date();
+    const status: BeatQueueStatus = "pending";
+    const counts = await countBeatItemsByStatus(database, now);
+    const [page, diagnostics] = await Promise.all([
+      listBeatItemsPage(database, { status, limit: BEAT_QUEUE_DEFAULT_LIMIT }),
+      getBeatQueueDiagnostics(database, counts, now),
+    ]);
+    return {
+      enabled,
+      generatedAt,
+      items: [],
+      adminItems: page.items,
       source: "d1",
+      adminStatus: status,
+      adminNextCursor: page.nextCursor,
+      adminLimit: page.limit,
+      adminCounts: counts,
+      adminDiagnostics: diagnostics,
     };
   } catch {
-    return { enabled, generatedAt, items: [], adminItems: [], source: "empty" };
+    return {
+      enabled,
+      generatedAt,
+      items: [],
+      adminItems: [],
+      source: "empty",
+      adminStatus: "pending",
+      adminNextCursor: null,
+      adminDiagnostics: unavailableBeatDiagnostics(),
+    };
   }
 });
 
@@ -229,6 +266,11 @@ export const discoverBeatCandidates = createServerFn({ method: "POST" })
         });
         inserted += 1;
       } catch (err) {
+        // Recognized dedupe uniqueness conflicts are concurrent duplicates, not failures.
+        if (isBeatUniquenessConflict(err)) {
+          discovered.skippedDuplicates += 1;
+          continue;
+        }
         discovered.errors.push(err instanceof Error ? err.message : String(err));
       }
     }

@@ -8,6 +8,7 @@ import type { BeatCategory } from "./types";
 import { classifyBeatMedia, normalizeBeatUrl } from "./allowlist";
 import { beatDuplicateFingerprint } from "./fingerprint";
 import { upsertBeatItem, existingBeatFingerprints } from "./db.server";
+import { isBeatUniquenessConflict } from "./ingest-errors";
 import { BEAT_ITEM_COLUMNS, rowToBeatItem, type BeatItemRow } from "./row";
 import {
   candidatesFromEditorialJson,
@@ -147,6 +148,13 @@ export async function ingestPendingCandidates(
         category: c.categoryRecommendation,
       });
     } catch (err) {
+      // A concurrent insert can beat the pre-check and trip the unique indexes on
+      // original_url / duplicate_fingerprint. That is a duplicate, not a failure;
+      // any other database error must still surface in `errors`.
+      if (isBeatUniquenessConflict(err)) {
+        skippedDuplicates += 1;
+        continue;
+      }
       errors.push(err instanceof Error ? err.message : String(err));
     }
   }

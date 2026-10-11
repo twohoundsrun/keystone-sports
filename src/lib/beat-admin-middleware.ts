@@ -1,5 +1,13 @@
 import { createMiddleware } from '@tanstack/react-start';
 import { z } from 'zod';
+import {
+  clampBeatQueueLimit,
+  decodeBeatCursor,
+  isBeatQueueStatus,
+  type BeatQueueStatus,
+} from '@/lib/beat/queue';
+import { unavailableBeatDiagnostics } from '@/lib/beat/diagnostics';
+import { isBeatUniquenessConflict } from '@/lib/beat/ingest-errors';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -107,15 +115,28 @@ export const beatAdminMiddleware = createMiddleware({ type: 'request' }).server(
 
   if (operation === 'desk') {
     if (method !== 'GET') return json({ ok: false, error: 'GET only.' }, 405);
+
+    const statusParam = url.searchParams.get('status');
+    const status: BeatQueueStatus | null =
+      statusParam == null ? 'pending' : isBeatQueueStatus(statusParam) ? statusParam : null;
+    if (status == null) return json({ ok: false, error: 'Unknown Beat queue status.' }, 422);
+
+    const cursorParam = url.searchParams.get('cursor');
+    const cursor = cursorParam ? decodeBeatCursor(cursorParam) : null;
+    if (cursorParam && !cursor) return json({ ok: false, error: 'Invalid Beat queue cursor.' }, 422);
+
+    const limit = clampBeatQueueLimit(url.searchParams.get('limit'));
+    const now = new Date();
+
     try {
       const { db, runtime } = await import('@/lib/publishing/runtime.server');
-      const { listBeatItems, listPublicBeatRows } = await import('@/lib/beat/db.server');
-      const { selectPublicBeatItems } = await import('@/lib/beat/order');
+      const { listBeatItemsPage, countBeatItemsByStatus, getBeatQueueDiagnostics } = await import('@/lib/beat/db.server');
       const { readBeatM1Flag } = await import('@/lib/beat/flag');
       const database = db();
-      const [adminItems, publicRows] = await Promise.all([
-        listBeatItems(database),
-        listPublicBeatRows(database),
+      const counts = await countBeatItemsByStatus(database, now);
+      const [page, diagnostics] = await Promise.all([
+        listBeatItemsPage(database, { status, cursor, limit }),
+        getBeatQueueDiagnostics(database, counts, now),
       ]);
       return json({
         ok: true,
@@ -127,14 +148,26 @@ export const beatAdminMiddleware = createMiddleware({ type: 'request' }).server(
         },
         desk: {
           enabled: readBeatM1Flag(runtime() as unknown as Record<string, unknown>),
-          generatedAt: new Date().toISOString(),
-          items: selectPublicBeatItems(publicRows),
-          adminItems,
+          generatedAt: now.toISOString(),
+          items: [],
+          adminItems: page.items,
           source: 'd1',
+          adminStatus: status,
+          adminNextCursor: page.nextCursor,
+          adminLimit: page.limit,
+          adminCounts: counts,
+          adminDiagnostics: diagnostics,
         },
       });
     } catch {
-      return json({ ok: false, error: 'The Beat desk is temporarily unavailable.' }, 500);
+      return json(
+        {
+          ok: false,
+          error: 'The Beat desk is temporarily unavailable.',
+          diagnostics: unavailableBeatDiagnostics(now),
+        },
+        500,
+      );
     }
   }
 
@@ -269,6 +302,10 @@ export const beatAdminMiddleware = createMiddleware({ type: 'request' }).server(
           });
           inserted += 1;
         } catch (error) {
+          if (isBeatUniquenessConflict(error)) {
+            discovered.skippedDuplicates += 1;
+            continue;
+          }
           discovered.errors.push(error instanceof Error ? error.message : String(error));
         }
       }
