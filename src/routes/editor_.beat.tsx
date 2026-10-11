@@ -19,6 +19,7 @@ import { beatPendingStaleness, formatBeatAge } from "@/lib/beat/staleness";
 import { EMPTY_BEAT_QUEUE_COUNTS, type BeatQueueCounts, type BeatQueueStatus } from "@/lib/beat/queue";
 import type { BeatQueueDiagnostics } from "@/lib/beat/diagnostics";
 import { beatQueueFilterLabel, deriveBeatQueueViewState } from "@/lib/beat/queue-view";
+import { QueueLoader, type QueueLoadOutcome } from "@/lib/beat/queue-loader";
 
 type SiteAccess = {
   signedIn: boolean;
@@ -101,6 +102,17 @@ async function loadBeatQueue(params: {
     error: typeof body.error === "string" ? body.error : "Could not load the Beat queue.",
     diagnostics: (body.diagnostics as BeatQueueDiagnostics | undefined) ?? desk?.adminDiagnostics,
   };
+}
+
+type BeatQueueParams = { status: BeatQueueStatus; cursor: string | null };
+
+/** Adapts the paginated desk read into a loader outcome, preserving failure diagnostics. */
+async function requestBeatQueuePage(
+  params: BeatQueueParams,
+): Promise<QueueLoadOutcome<BeatDeskPayload, BeatQueueDiagnostics>> {
+  const result = await loadBeatQueue({ status: params.status, cursor: params.cursor, limit: PAGE_SIZE });
+  if (result.ok) return { ok: true, data: result.desk };
+  return { ok: false, error: result.error, diagnostics: result.diagnostics };
 }
 
 async function mutateBeatItemViaAccess(data: BeatMutationInput): Promise<void> {
@@ -200,6 +212,32 @@ function BeatEditorPage() {
     expiresAt: "",
   });
 
+  const [loader] = useState(
+    () =>
+      new QueueLoader<BeatDeskPayload, BeatQueueDiagnostics, BeatQueueParams>(
+        requestBeatQueuePage,
+        beatActionErrorMessage,
+        (state) => {
+          setLoading(state.loading);
+          if (state.error !== null) {
+            setQueueError(state.error);
+            if (state.errorDiagnostics) setDiagnostics(state.errorDiagnostics);
+            setItems([]);
+            return;
+          }
+          setQueueError(null);
+          if (!state.data) {
+            setItems([]);
+            return;
+          }
+          setItems(state.data.adminItems ?? []);
+          setCounts(state.data.adminCounts ?? EMPTY_BEAT_QUEUE_COUNTS);
+          setNextCursor(state.data.adminNextCursor ?? null);
+          setDiagnostics(state.data.adminDiagnostics ?? null);
+        },
+      ),
+  );
+
   const preview = items.find((r) => r.id === previewId) ?? items[0] ?? null;
   const viewState = deriveBeatQueueViewState({ ok: queueError == null, itemCount: items.length });
 
@@ -226,20 +264,8 @@ function BeatEditorPage() {
     );
   }
 
-  async function loadPage(nextStatus: BeatQueueStatus, cursor: string | null) {
-    setLoading(true);
-    setQueueError(null);
-    const result = await loadBeatQueue({ status: nextStatus, cursor, limit: PAGE_SIZE });
-    if (result.ok) {
-      setItems(result.desk.adminItems ?? []);
-      setCounts(result.desk.adminCounts ?? EMPTY_BEAT_QUEUE_COUNTS);
-      setNextCursor(result.desk.adminNextCursor ?? null);
-      setDiagnostics(result.desk.adminDiagnostics ?? null);
-    } else {
-      setQueueError(result.error);
-      if (result.diagnostics) setDiagnostics(result.diagnostics);
-    }
-    setLoading(false);
+  function loadPage(nextStatus: BeatQueueStatus, cursor: string | null) {
+    return loader.load({ status: nextStatus, cursor });
   }
 
   async function refresh(msg?: string) {

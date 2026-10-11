@@ -274,7 +274,7 @@ test('editor resets the cursor and page on filter change and paginates the serve
   assert.match(editor, /changeFilter\(next: BeatQueueStatus\)/);
   assert.match(editor, /setCursorStack\(\[null\]\)/);
   assert.match(editor, /setPageIndex\(0\)/);
-  assert.match(editor, /loadBeatQueue\(\{ status: nextStatus, cursor, limit: PAGE_SIZE \}\)/);
+  assert.match(editor, /loadBeatQueue\(\{ status: params\.status, cursor: params\.cursor, limit: PAGE_SIZE \}\)/);
   assert.match(editor, /adminNextCursor/);
   assert.match(editor, /goNext/);
   assert.match(editor, /goPrev/);
