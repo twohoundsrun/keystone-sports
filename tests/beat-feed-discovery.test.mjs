@@ -197,7 +197,34 @@ test("request caps, no retries, disabled-source verification and source item cap
   assert.equal(calls.length, 8);
   assert.equal(result.report.sources.length, 9);
   assert.equal(result.report.sources[0].state, "disabled");
-  assert.ok(result.report.sources.every((s) => s.eligible <= 8));
+  assert.ok(result.candidates.length <= 10);
+  assert.ok(
+    result.candidates.every(
+      (c) => result.candidates.filter((other) => other.account === c.account).length <= 8,
+    ),
+  );
+});
+
+test("repeated runs advance past eight already queued items from the same source", async () => {
+  const rows = [
+    {
+      source: source("busy", "eagles"),
+      articles: Array.from({ length: 9 }, (_, n) =>
+        article(`transaction-${n}`, `Eagles sign veteran player number ${n}`, 1 + n / 10),
+      ),
+    },
+  ];
+  const opts = options({ sources: rows.map((r) => r.source), fetchImpl: fetchScenario(rows) });
+  const first = await discoverFeedCandidates(opts);
+  assert.equal(first.candidates.length, 8);
+  assert.equal(first.report.deferred, 1);
+  const second = await discoverFeedCandidates({
+    ...opts,
+    existingFingerprints: new Set(first.candidates.map((c) => c.duplicateFingerprint)),
+  });
+  assert.equal(second.skippedDuplicates, 8);
+  assert.equal(second.candidates.length, 1);
+  assert.ok(!first.candidates.some((c) => c.originalUrl === second.candidates[0].originalUrl));
 });
 
 test("timeout, oversize and redirects fail independently without retries", async () => {

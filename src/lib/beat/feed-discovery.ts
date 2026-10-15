@@ -172,10 +172,6 @@ export async function discoverFeedCandidates(
             reject("routine");
             continue;
           }
-          if (observation.eligible >= 8) {
-            reject("source_cap");
-            continue;
-          }
           observation.eligible += 1;
           eligible[coverage.area] = (eligible[coverage.area] ?? 0) + 1;
           raw.push({
@@ -215,8 +211,18 @@ export async function discoverFeedCandidates(
   }
   await Promise.all(Array.from({ length: Math.min(3, sources.length) }, () => worker()));
   const normalized = candidatesFromEditorialJson(raw, { ...opts, now });
-  const deferred = Math.max(0, normalized.candidates.length - FEED_MAX_CANDIDATES);
-  normalized.candidates = normalized.candidates.slice(0, FEED_MAX_CANDIDATES);
+  // Cap net-new candidates, not feed entries: previously queued reports must
+  // never consume the slots needed to reach the next fresh development.
+  const sourceCounts = new Map<string, number>();
+  const available = normalized.candidates.length;
+  normalized.candidates = normalized.candidates
+    .filter((candidate) => {
+      const count = sourceCounts.get(candidate.account) ?? 0;
+      sourceCounts.set(candidate.account, count + 1);
+      return count < 8;
+    })
+    .slice(0, FEED_MAX_CANDIDATES);
+  const deferred = available - normalized.candidates.length;
   const issues = observations
     .filter((s) => s.state !== "ok")
     .map((s) => `${s.label}: ${s.state}${s.error ? ` (${s.error})` : ""}`);

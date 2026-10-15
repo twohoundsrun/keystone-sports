@@ -14,7 +14,7 @@ The feature branch starts at master `3a412d41de316c07f704bd43cb8cea90304c66a0`. 
 | Expiration worker | jobs worker cron `15 * * * *` | Configured hourly, expire-only. Deployment/runtime execution is not claimed from config alone. Frequency unchanged. |
 | AI recap draft job | main worker cron `0 1 * * *` | Separate opt-in/secret-gated workflow, not discovery. Unchanged and not invoked. |
 
-The six official development skill packages remain outside the repository. Relevant guidance was used for diagnosis/regression fixtures, React/UI review, code review and browser tests. No skill implementation files are vendored here.
+All six installed development skills are present in the local Agent Skills search path: `agent-browser`, `vercel-react-best-practices`, `web-design-guidelines`, `diagnosing-bugs`, `code-review`, and `frontend-design`; no package is missing. The current conversation tool catalog does not enumerate them, so they were inspected directly from `/home/agent/.agents/skills/`. A separate native Codex skill scan in this environment enumerated all six as enabled. The packages remain outside the repository. Relevant guidance was used for diagnosis/regression fixtures, React/UI review, code review and browser tests. No skill implementation files are vendored here.
 
 ## Coverage audit
 
@@ -86,7 +86,7 @@ Unavailable sources are not replaced with fragile scraping, unlicensed mirrors, 
 - A D1 conditional claim applies a **ten-minute shared cooldown**, including dry-runs. This is a manual-action request limit, not a cron-frequency change. A dry-run updates diagnostic metadata but inserts no cards; a subsequent request during cooldown returns the saved report without fetching or inserting. In-progress runs may not yet have a report.
 - Source `Retry-After` dates/seconds are saved and honored on later runs even after the shared cooldown expires. One bounded latest report/lease row is stored; no historical dashboard, cleanup job or recurring poller is added.
 - Publication age stays original. Articles older than 72 hours, undated/ambiguous dates, and more than five minutes in the future are excluded. Updates are evidence for inspecting an original, not permission to re-age it or rewrite it. Routine posts and out-of-coverage stories are filtered before scoring.
-- Up to eight eligible entries per source are considered, newest first. Phase 4C ranks the combined unique candidates; at most **ten inserts per run** fit the conservative request/query budget. Additional candidates are explicitly reported as deferred. A later run dedupes already inserted candidates and can admit the remainder.
+- Up to 100 bounded metadata entries per source are inspected. Phase 4C normalizes, deduplicates and ranks the combined candidates before an eight-new-candidate per-source cap; at most **ten inserts per run** fit the conservative request/query budget. Additional candidates are explicitly reported as deferred. A later run dedupes already inserted candidates and can admit the remainder.
 - Worst-case planned discovery work is nine HTTP fetches plus about 36 D1 statements (three writer statements per candidate, six coordination/global reads/writes), below a conservative 50-operation budget. Dry-run work is lower. Owner queue reads add one small report lookup. Existing global fingerprint scans remain a scalability limit at very large archive sizes.
 - Reports distinguish unavailable, malformed, empty, stale, disabled/backoff sources; observed/eligible/selected counts; timestamp/routine/out-of-area rejections; duplicate-heavy runs; relevance discards; budget deferrals; and missing dedicated coverage sources. These are evidence about acquisition, not assertions that a particular event was missed.
 - **No paid API, new secret, recurring AI usage, subscription, cron change, Apify activation or automatic publication.** One XML parser dependency adds eight packages, with no existing locked package versions upgraded. npm regenerated optional/peer metadata; frozen-lockfile installation was tested.
@@ -119,3 +119,22 @@ Run `npm test`, `npm run test:sports` (same suite), `npm run lint`, `npm run bui
 Apply the new generated migration `0005_beat_discovery_state` through the normal reviewed release process before using feed discovery. The queue can still be read if the report table is absent; the old explicit X mode is retained. This task does not apply a production migration or deploy.
 
 The cloud network proxy currently prevents GitHub API access as well as source checks, even though Git fetch/push work. If PR creation remains blocked, use the pushed branch comparison link. New-source activation and live Cloudflare Access policy verification remain separate follow-up work; do not mistake passing local synthetic tests for those checks.
+
+## Executed validation and independent review
+
+- Root `npm test`: **170 passed**, zero failures/skips; `npm run test:sports` repeats the same suite successfully. This includes **17 new feed tests**.
+- Jobs worker: **37 passed** and its TypeScript check passed; the worker is unchanged.
+- Root TypeScript check, Drizzle snapshot-chain check, and production build passed. Both `dist/server/index.mjs` and the OpenAI `index.js` wrapper/hosting metadata were produced. Frozen `npm ci` succeeded.
+- Lint: zero errors; existing unrelated `weekOddsBoards` unused-variable warning remains in `sports/server.ts`.
+- Actual Wrangler local D1 + built app: **14 assertions passed**, covering source-to-queue pagination/ranking, owner/wrong-owner/signed-out access, cooldown, reports, preview-related data, approval/rejection and public visibility. Ten synthetic records only; isolated local state outside the repository.
+- Chromium: **10 checks passed**, including owner diagnostics, filters, story preview, signed-out withholding, and no overflow at 320/390 px. These validate local application behavior with a trusted-header fixture, not the deployed Cloudflare Access policy.
+
+### Standards
+
+Independent review found a per-source-cap starvation issue: eight already-queued reports could block the next fresh item. The cap now applies after Phase 4C deduplication/ranking. A nine-item repeated-run regression passes (eight first, then the ninth). Reviewer re-review reports **zero remaining standards/correctness blockers**.
+
+### Spec
+
+Independent review found the same repeated-run issue; the fix was re-reviewed and cleared. **Zero remaining spec-level code blockers**. Live source acquisition, broader real-world coverage and deployed Access configuration remain unverified rather than claimed passed.
+
+Review totals: Standards zero open findings; Spec zero open code findings. Both axes retain the external live-verification limitation.
