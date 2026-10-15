@@ -20,7 +20,7 @@ const allow = load('src/lib/beat/allowlist.ts', [
 const sanitizer = load('src/lib/beat/sanitize-oembed.ts', ['sanitizeXOembedHtml']);
 const fp = load(
   'src/lib/beat/fingerprint.ts',
-  ['beatDuplicateFingerprint', 'urlsLikelySameStory'],
+  ['beatDuplicateFingerprint', 'urlsLikelySameStory', 'beatStoryRelation'],
   {
     normalizeBeatUrl: allow.normalizeBeatUrl,
     extractXStatusId: allow.extractXStatusId,
@@ -41,6 +41,8 @@ const discovery = load(
   ],
   {
     beatDuplicateFingerprint: fp.beatDuplicateFingerprint,
+    beatStoryRelation: fp.beatStoryRelation,
+    discoveryPriority: load('src/lib/beat/priority.ts', ['discoveryPriority']).discoveryPriority,
     classifyBeatMedia: allow.classifyBeatMedia,
   },
 );

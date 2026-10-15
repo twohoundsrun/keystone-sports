@@ -7,7 +7,7 @@ import type { Database } from "../publishing/runtime.server";
 import type { BeatCategory } from "./types";
 import { classifyBeatMedia, normalizeBeatUrl } from "./allowlist";
 import { beatDuplicateFingerprint } from "./fingerprint";
-import { upsertBeatItem, existingBeatFingerprints } from "./db.server";
+import { upsertBeatItem, existingBeatFingerprints, existingBeatStories } from "./db.server";
 import { isBeatUniquenessConflict } from "./ingest-errors";
 import { BEAT_ITEM_COLUMNS, rowToBeatItem, type BeatItemRow } from "./row";
 import {
@@ -90,6 +90,7 @@ export async function ingestPendingCandidates(
   const fingerprints = await existingBeatFingerprints(database);
   const normalized = candidatesFromEditorialJson(raw, {
     existingFingerprints: fingerprints,
+    existingStories: await existingBeatStories(database),
     newsUrls: opts?.newsUrls,
   });
   const candidates = normalized.candidates;

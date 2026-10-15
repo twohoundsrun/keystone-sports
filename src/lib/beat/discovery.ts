@@ -8,7 +8,12 @@
  */
 
 import type { BeatCategory, BeatDiscoveryCandidate, BeatMediaType, SourceTier } from "./types";
-import { beatDuplicateFingerprint } from "./fingerprint";
+import {
+  beatDuplicateFingerprint,
+  beatStoryRelation,
+  type BeatStoryReference,
+} from "./fingerprint";
+import { discoveryPriority } from "./priority";
 import { classifyBeatMedia } from "./allowlist";
 
 export type DiscoverAccount = {
@@ -23,18 +28,114 @@ export type DiscoverAccount = {
 
 /** Curated PA sports accounts — reference list for operators, not a firehose. */
 export const PA_BEAT_DISCOVERY_ACCOUNTS: DiscoverAccount[] = [
-  { handle: "Eagles", source: "@Eagles", sourceTier: "official_team_league", teamSlug: "eagles", league: "NFL", verifiedOfficial: true, defaultCategory: "reaction" },
-  { handle: "steelers", source: "@steelers", sourceTier: "official_team_league", teamSlug: "steelers", league: "NFL", verifiedOfficial: true, defaultCategory: "reaction" },
-  { handle: "Phillies", source: "@Phillies", sourceTier: "official_team_league", teamSlug: "phillies", league: "MLB", verifiedOfficial: true, defaultCategory: "reaction" },
-  { handle: "Pirates", source: "@Pirates", sourceTier: "official_team_league", teamSlug: "pirates", league: "MLB", verifiedOfficial: true, defaultCategory: "reaction" },
-  { handle: "sixers", source: "@sixers", sourceTier: "official_team_league", teamSlug: "sixers", league: "NBA", verifiedOfficial: true, defaultCategory: "reaction" },
-  { handle: "NHLFlyers", source: "@NHLFlyers", sourceTier: "official_team_league", teamSlug: "flyers", league: "NHL", verifiedOfficial: true, defaultCategory: "reaction" },
-  { handle: "penguins", source: "@penguins", sourceTier: "official_team_league", teamSlug: "penguins", league: "NHL", verifiedOfficial: true, defaultCategory: "reaction" },
-  { handle: "PhilaUnion", source: "@PhilaUnion", sourceTier: "official_team_league", teamSlug: "union", league: "MLS", verifiedOfficial: true, defaultCategory: "reaction" },
-  { handle: "PennStateFball", source: "@PennStateFball", sourceTier: "official_team_league", teamSlug: "penn-state", league: "NCAAF", verifiedOfficial: true, defaultCategory: "reaction" },
-  { handle: "Pitt_FB", source: "@Pitt_FB", sourceTier: "official_team_league", teamSlug: "pitt", league: "NCAAF", verifiedOfficial: true, defaultCategory: "reaction" },
-  { handle: "Jeff_McLane", source: "Inquirer / Jeff McLane", sourceTier: "reporter_original", teamSlug: "eagles", league: "NFL", verifiedOfficial: false, defaultCategory: "from_the_beat" },
-  { handle: "DZangaroNBCS", source: "NBCS Philly / Dave Zangaro", sourceTier: "broadcaster_publication", teamSlug: "eagles", league: "NFL", verifiedOfficial: false, defaultCategory: "locker_room" },
+  {
+    handle: "Eagles",
+    source: "@Eagles",
+    sourceTier: "official_team_league",
+    teamSlug: "eagles",
+    league: "NFL",
+    verifiedOfficial: true,
+    defaultCategory: "reaction",
+  },
+  {
+    handle: "steelers",
+    source: "@steelers",
+    sourceTier: "official_team_league",
+    teamSlug: "steelers",
+    league: "NFL",
+    verifiedOfficial: true,
+    defaultCategory: "reaction",
+  },
+  {
+    handle: "Phillies",
+    source: "@Phillies",
+    sourceTier: "official_team_league",
+    teamSlug: "phillies",
+    league: "MLB",
+    verifiedOfficial: true,
+    defaultCategory: "reaction",
+  },
+  {
+    handle: "Pirates",
+    source: "@Pirates",
+    sourceTier: "official_team_league",
+    teamSlug: "pirates",
+    league: "MLB",
+    verifiedOfficial: true,
+    defaultCategory: "reaction",
+  },
+  {
+    handle: "sixers",
+    source: "@sixers",
+    sourceTier: "official_team_league",
+    teamSlug: "sixers",
+    league: "NBA",
+    verifiedOfficial: true,
+    defaultCategory: "reaction",
+  },
+  {
+    handle: "NHLFlyers",
+    source: "@NHLFlyers",
+    sourceTier: "official_team_league",
+    teamSlug: "flyers",
+    league: "NHL",
+    verifiedOfficial: true,
+    defaultCategory: "reaction",
+  },
+  {
+    handle: "penguins",
+    source: "@penguins",
+    sourceTier: "official_team_league",
+    teamSlug: "penguins",
+    league: "NHL",
+    verifiedOfficial: true,
+    defaultCategory: "reaction",
+  },
+  {
+    handle: "PhilaUnion",
+    source: "@PhilaUnion",
+    sourceTier: "official_team_league",
+    teamSlug: "union",
+    league: "MLS",
+    verifiedOfficial: true,
+    defaultCategory: "reaction",
+  },
+  {
+    handle: "PennStateFball",
+    source: "@PennStateFball",
+    sourceTier: "official_team_league",
+    teamSlug: "penn-state",
+    league: "NCAAF",
+    verifiedOfficial: true,
+    defaultCategory: "reaction",
+  },
+  {
+    handle: "Pitt_FB",
+    source: "@Pitt_FB",
+    sourceTier: "official_team_league",
+    teamSlug: "pitt",
+    league: "NCAAF",
+    verifiedOfficial: true,
+    defaultCategory: "reaction",
+  },
+  {
+    handle: "Jeff_McLane",
+    source: "Inquirer / Jeff McLane",
+    sourceTier: "reporter_original",
+    teamSlug: "eagles",
+    league: "NFL",
+    verifiedOfficial: false,
+    defaultCategory: "from_the_beat",
+  },
+  {
+    handle: "DZangaroNBCS",
+    source: "NBCS Philly / Dave Zangaro",
+    sourceTier: "broadcaster_publication",
+    teamSlug: "eagles",
+    league: "NFL",
+    verifiedOfficial: false,
+    defaultCategory: "locker_room",
+  },
 ];
 
 /**
@@ -67,26 +168,22 @@ export function shouldDiscardByScore(score: number): boolean {
   return scoreBandForRelevance(score) === "discard";
 }
 
-const BREAKING_HINT = /\b(breaking|ruled out|activated|signed|traded|waived|injury report|ir\b|pup\b|suspended)\b/i;
+const BREAKING_HINT =
+  /\b(breaking|ruled out|activated|signed|traded|waived|injury report|ir\b|pup\b|suspended)\b/i;
 const RUMOR_HINT = /\b(rumor|sources say|hearing|reportedly|per sources)\b/i;
 
-export function scoreDiscoveryCandidate(input: {
-  sourceTier: SourceTier;
-  verifiedOfficial: boolean;
-  text: string;
-  category: BeatCategory;
-}): number {
-  let score = 40;
-  if (input.sourceTier === "official_team_league") score += 30;
-  else if (input.sourceTier === "reporter_original") score += 25;
-  else if (input.sourceTier === "broadcaster_publication") score += 15;
-  if (input.verifiedOfficial) score += 10;
-  if (BREAKING_HINT.test(input.text)) score += 15;
-  if (input.category === "breaking") score += 10;
-  if (RUMOR_HINT.test(input.text)) score -= 20; // rumors need manual approval; never boost
-  // Reddit / aggregators never outrank reporting — capped low if somehow present
-  if (input.sourceTier === "aggregator") score = Math.min(score, 25);
-  return Math.max(0, Math.min(100, score));
+export function scoreDiscoveryCandidate(
+  input: {
+    sourceTier: SourceTier;
+    verifiedOfficial: boolean;
+    text: string;
+    category: BeatCategory;
+    teamSlug?: string | null;
+    timestamp?: string;
+  },
+  now: Date = new Date(),
+): number {
+  return discoveryPriority(input, now).score;
 }
 
 export function recommendCategory(text: string, fallback: BeatCategory): BeatCategory {
@@ -96,10 +193,20 @@ export function recommendCategory(text: string, fallback: BeatCategory): BeatCat
   return fallback;
 }
 
-export function proposeExpiration(category: BeatCategory, timestampIso: string): string | undefined {
+export function proposeExpiration(
+  category: BeatCategory,
+  timestampIso: string,
+): string | undefined {
   const base = Date.parse(timestampIso);
   if (!Number.isFinite(base)) return undefined;
-  const hours = category === "breaking" ? 24 : category === "from_the_beat" ? 72 : category === "reaction" ? 96 : 120;
+  const hours =
+    category === "breaking"
+      ? 24
+      : category === "from_the_beat"
+        ? 72
+        : category === "reaction"
+          ? 96
+          : 120;
   return new Date(base + hours * 3600_000).toISOString();
 }
 
@@ -112,7 +219,10 @@ export function extractStatusIdsFromSyndicationHtml(html: string): string[] {
   return [...ids];
 }
 
-export async function fetchSyndicationTimeline(handle: string, fetchImpl: typeof fetch = fetch): Promise<string> {
+export async function fetchSyndicationTimeline(
+  handle: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string> {
   const url = `https://syndication.twitter.com/srv/timeline-profile/screen-name/${encodeURIComponent(handle)}`;
   const res = await fetchImpl(url, {
     headers: { "user-agent": "KeystoneBeatDiscover/1.0 (+https://keystonebeat.com)" },
@@ -121,7 +231,10 @@ export async function fetchSyndicationTimeline(handle: string, fetchImpl: typeof
   return res.text();
 }
 
-export async function fetchXoEmbed(statusUrl: string, fetchImpl: typeof fetch = fetch): Promise<{ html?: string; authorName?: string } | null> {
+export async function fetchXoEmbed(
+  statusUrl: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<{ html?: string; authorName?: string } | null> {
   const endpoint = `https://publish.twitter.com/oembed?omit_script=true&url=${encodeURIComponent(statusUrl)}`;
   const res = await fetchImpl(endpoint, {
     headers: { "user-agent": "KeystoneBeatDiscover/1.0 (+https://keystonebeat.com)" },
@@ -138,6 +251,7 @@ export async function fetchXoEmbed(statusUrl: string, fetchImpl: typeof fetch = 
 export type DiscoverOptions = {
   accounts?: DiscoverAccount[];
   existingFingerprints?: Set<string>;
+  existingStories?: BeatStoryReference[];
   /** Extra URLs already on the News wire (dedupe). */
   newsUrls?: string[];
   fetchImpl?: typeof fetch;
@@ -224,26 +338,43 @@ export function candidatesFromEditorialJson(
         raw.mediaType && raw.embedUrl !== undefined
           ? { mediaType: raw.mediaType, embedUrl: raw.embedUrl, embedId: raw.embedId }
           : classifyBeatMedia(originalUrl);
-      const fingerprint =
-        raw.duplicateFingerprint ??
-        beatDuplicateFingerprint({ originalUrl, teamSlug: raw.teamSlug, headline });
-      if (existing.has(fingerprint) || existing.has(`url:${originalUrl.toLowerCase()}`)) {
+      // Always retain the canonical URL key, even if an operator supplies an
+      // additional fingerprint. A caller cannot evade URL dedupe with a new key.
+      const canonicalFingerprint = beatDuplicateFingerprint({
+        originalUrl,
+        teamSlug: raw.teamSlug,
+        headline,
+      });
+      const fingerprint = raw.duplicateFingerprint ?? canonicalFingerprint;
+      if (existing.has(fingerprint) || existing.has(canonicalFingerprint)) {
         skippedDuplicates += 1;
         continue;
       }
-      let relevanceScore =
+      const priority = discoveryPriority(
+        { sourceTier, verifiedOfficial, text, teamSlug: raw.teamSlug, timestamp: raw.timestamp },
+        opts.now,
+      );
+      const suppliedScore =
         typeof raw.relevanceScore === "number" && Number.isFinite(raw.relevanceScore)
-          ? Math.max(0, Math.min(100, raw.relevanceScore))
-          : scoreDiscoveryCandidate({ sourceTier, verifiedOfficial, text, category });
-      // Optional breakingScore boost when provided by operator bot (no DB column).
-      if (typeof raw.breakingScore === "number" && Number.isFinite(raw.breakingScore)) {
-        relevanceScore = Math.max(relevanceScore, Math.max(0, Math.min(100, raw.breakingScore)));
-      }
+          ? raw.relevanceScore
+          : undefined;
+      const breakingScore =
+        typeof raw.breakingScore === "number" && Number.isFinite(raw.breakingScore)
+          ? raw.breakingScore
+          : undefined;
+      // Operator hints can adjust a score by at most 15 points. They cannot
+      // turn promotions, stale/off-topic items or aggregators into top stories.
+      const ceiling = sourceTier === "aggregator" ? 25 : Math.min(100, priority.score + 15);
+      const relevanceScore = Math.max(
+        0,
+        Math.min(ceiling, Math.max(suppliedScore ?? priority.score, breakingScore ?? 0)),
+      );
       if (shouldDiscardByScore(relevanceScore)) {
         discarded += 1;
         continue;
       }
-      const timestamp = raw.timestamp && Number.isFinite(Date.parse(raw.timestamp)) ? raw.timestamp : nowIso;
+      const timestamp =
+        raw.timestamp && Number.isFinite(Date.parse(raw.timestamp)) ? raw.timestamp : nowIso;
       const proposedExpiration =
         raw.proposedExpiration ?? raw.expiresAt ?? proposeExpiration(category, timestamp);
       const candidate: BeatDiscoveryCandidate = {
@@ -260,7 +391,7 @@ export function candidatesFromEditorialJson(
           raw.context ??
           (RUMOR_HINT.test(text)
             ? "Rumor language detected — keep pending and label before any approve."
-            : `Editorial candidate (${scoreBandForRelevance(relevanceScore)}). Desk: confirm category, Keystone Beat context, and expiration before approve.`),
+            : `Editorial candidate (priority ${relevanceScore}/100). Desk: confirm category, Keystone Beat context, and expiration before approve.`),
         headline: truncateHeadline(headline, 140),
         source: raw.source ?? account,
         mediaType: media.mediaType,
@@ -268,18 +399,25 @@ export function candidatesFromEditorialJson(
         embedId: media.embedId,
         oembedHtml: raw.oembedHtml,
         relevanceScore,
+        priorityReasons: priority.reasons,
         duplicateFingerprint: fingerprint,
         proposedExpiration,
       };
       candidates.push(candidate);
       existing.add(fingerprint);
+      existing.add(canonicalFingerprint);
     } catch (err) {
       errors.push(err instanceof Error ? err.message : String(err));
     }
   }
 
-  candidates.sort((a, b) => b.relevanceScore - a.relevanceScore);
-  return { candidates, skippedDuplicates, discarded, errors };
+  const matched = dedupeDiscoveryStories(candidates, opts.existingStories);
+  return {
+    candidates: matched.candidates,
+    skippedDuplicates: skippedDuplicates + matched.skippedDuplicates,
+    discarded,
+    errors,
+  };
 }
 
 /**
@@ -311,16 +449,26 @@ export async function discoverPaBeatCandidates(opts: DiscoverOptions = {}): Prom
           continue;
         }
         const oembed = await fetchXoEmbed(originalUrl, fetchImpl);
-        const text = oembed?.html?.replace(/<[^>]+>/g, " ") ?? `Post from @${account.handle}`;
+        if (!oembed?.html) {
+          errors.push(`No readable post content for @${account.handle} status ${id}`);
+          continue;
+        }
+        const text = stripTags(oembed.html);
         const category = recommendCategory(text, account.defaultCategory);
         const media = classifyBeatMedia(originalUrl);
-        const timestamp = (opts.now ?? new Date()).toISOString();
-        const relevanceScore = scoreDiscoveryCandidate({
-          sourceTier: account.sourceTier,
-          verifiedOfficial: account.verifiedOfficial,
-          text,
-          category,
-        });
+        // X snowflakes encode creation time; discovery time is not freshness.
+        const timestamp = new Date(Number((BigInt(id) >> 22n) + 1288834974657n)).toISOString();
+        const relevanceScore = scoreDiscoveryCandidate(
+          {
+            sourceTier: account.sourceTier,
+            verifiedOfficial: account.verifiedOfficial,
+            text,
+            category,
+            teamSlug: account.teamSlug,
+            timestamp,
+          },
+          opts.now,
+        );
         if (shouldDiscardByScore(relevanceScore)) continue;
         const candidate: BeatDiscoveryCandidate = {
           originalUrl,
@@ -352,15 +500,44 @@ export async function discoverPaBeatCandidates(opts: DiscoverOptions = {}): Prom
     }
   }
 
-  candidates.sort((a, b) => b.relevanceScore - a.relevanceScore);
-  return { candidates, skippedDuplicates, errors };
+  const matched = dedupeDiscoveryStories(candidates, opts.existingStories);
+  return {
+    candidates: matched.candidates,
+    skippedDuplicates: skippedDuplicates + matched.skippedDuplicates,
+    errors,
+  };
 }
 
 function stripTags(html: string): string {
-  return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  return html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function truncateHeadline(text: string, max: number): string {
   if (text.length <= max) return text;
   return `${text.slice(0, max - 1).trim()}…`;
+}
+
+/** Score before headline matching so the strongest source represents a repeat. */
+export function dedupeDiscoveryStories(
+  candidates: BeatDiscoveryCandidate[],
+  existingStories: BeatStoryReference[] = [],
+): { candidates: BeatDiscoveryCandidate[]; skippedDuplicates: number } {
+  const accepted: BeatDiscoveryCandidate[] = [];
+  let skippedDuplicates = 0;
+  const ordered = [...candidates].sort(
+    (a, b) => b.relevanceScore - a.relevanceScore || a.originalUrl.localeCompare(b.originalUrl),
+  );
+  for (const candidate of ordered) {
+    const stories = [...existingStories, ...accepted];
+    if (stories.some((story) => beatStoryRelation(candidate, story) === "duplicate")) {
+      skippedDuplicates += 1;
+      continue;
+    }
+    const related = stories.find((story) => beatStoryRelation(candidate, story) === "related");
+    accepted.push(related ? { ...candidate, relatedStoryUrl: related.originalUrl } : candidate);
+  }
+  return { candidates: accepted, skippedDuplicates };
 }

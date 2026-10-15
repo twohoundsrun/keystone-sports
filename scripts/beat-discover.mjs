@@ -35,7 +35,9 @@ function loadHelpers() {
     .replace(/^import\s+[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, "")
     .replace(/\bexport /g, "")
     .replace(/import type[^;]+;/g, "");
-  const allow = new Function(`${allowCode}\nreturn { classifyBeatMedia, normalizeBeatUrl, extractXStatusId, extractYouTubeId };`)();
+  const allow = new Function(
+    `${allowCode}\nreturn { classifyBeatMedia, normalizeBeatUrl, extractXStatusId, extractYouTubeId };`,
+  )();
 
   const fpCode = stripTypeScriptTypes(readFileSync(fpPath, "utf8"), { mode: "transform" })
     .replace(/^import\s+[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, "")
@@ -44,8 +46,16 @@ function loadHelpers() {
     "normalizeBeatUrl",
     "extractXStatusId",
     "extractYouTubeId",
-    `${fpCode}\nreturn { beatDuplicateFingerprint };`,
+    `${fpCode}\nreturn { beatDuplicateFingerprint, beatStoryRelation };`,
   )(allow.normalizeBeatUrl, allow.extractXStatusId, allow.extractYouTubeId);
+
+  const priorityCode = stripTypeScriptTypes(
+    readFileSync(join(root, "src/lib/beat/priority.ts"), "utf8"),
+    { mode: "transform" },
+  )
+    .replace(/^import\s+[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, "")
+    .replace(/\bexport /g, "");
+  const priority = new Function(`${priorityCode}\nreturn { discoveryPriority };`)();
 
   const discCode = stripTypeScriptTypes(readFileSync(discoveryPath, "utf8"), { mode: "transform" })
     .replace(/^import\s+type[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, "")
@@ -54,8 +64,15 @@ function loadHelpers() {
   const discovery = new Function(
     "beatDuplicateFingerprint",
     "classifyBeatMedia",
+    "beatStoryRelation",
+    "discoveryPriority",
     `${discCode}\nreturn { discoverPaBeatCandidates, candidatesFromEditorialJson, PA_BEAT_DISCOVERY_ACCOUNTS, scoreDiscoveryCandidate, scoreBandForRelevance };`,
-  )(fp.beatDuplicateFingerprint, allow.classifyBeatMedia);
+  )(
+    fp.beatDuplicateFingerprint,
+    allow.classifyBeatMedia,
+    fp.beatStoryRelation,
+    priority.discoveryPriority,
+  );
 
   return discovery;
 }

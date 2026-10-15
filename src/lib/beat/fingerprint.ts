@@ -38,3 +38,66 @@ export function urlsLikelySameStory(a: string, b: string): boolean {
   const yb = extractYouTubeId(b);
   return Boolean(ya && yb && ya === yb);
 }
+
+export type BeatStoryReference = {
+  originalUrl: string;
+  headline: string;
+  teamSlug?: string | null;
+  timestamp?: string;
+};
+
+const HEADLINE_STOP_WORDS = new Set(
+  "a an the to of for in on at and as after with from by is has have will breaking report reports says sunday monday tuesday wednesday thursday friday saturday".split(
+    " ",
+  ),
+);
+const DEVELOPMENT_WORDS =
+  /\b(out|cleared|returns?|signed|traded|waived|activated|suspended|fired|hired|surgery|concussion|injury|doubtful|questionable|confirmed|denied|not|no|never|update|correction)\b/gi;
+
+function headlineWords(headline: string): Set<string> {
+  return new Set(
+    headline
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter((word) => word && !HEADLINE_STOP_WORDS.has(word)),
+  );
+}
+
+/**
+ * Conservative syndication matching. URL identity is permanent; headline/event
+ * matches require the same explicit team and a 48h window. Related coverage is
+ * advisory, never discarded. Changed numbers or developments always survive.
+ */
+export function beatStoryRelation(
+  a: BeatStoryReference,
+  b: BeatStoryReference,
+): "duplicate" | "related" | null {
+  if (urlsLikelySameStory(a.originalUrl, b.originalUrl)) return "duplicate";
+  if (!a.teamSlug || !b.teamSlug || a.teamSlug.toLowerCase() !== b.teamSlug.toLowerCase())
+    return null;
+  const timeA = Date.parse(a.timestamp ?? "");
+  const timeB = Date.parse(b.timestamp ?? "");
+  if (
+    !Number.isFinite(timeA) ||
+    !Number.isFinite(timeB) ||
+    Math.abs(timeA - timeB) > 48 * 3_600_000
+  )
+    return null;
+  const wordsA = headlineWords(a.headline);
+  const wordsB = headlineWords(b.headline);
+  if (Math.min(wordsA.size, wordsB.size) < 5) return null;
+  const common = [...wordsA].filter((word) => wordsB.has(word)).length;
+  const similarity = common / new Set([...wordsA, ...wordsB]).size;
+  if (similarity < 0.4) return null;
+  const developments = (text: string) =>
+    [...new Set(text.toLowerCase().match(DEVELOPMENT_WORDS) ?? [])].sort().join(" ");
+  const numbers = (text: string) => (text.match(/\d+/g) ?? []).join(" ");
+  const sameFacts =
+    developments(a.headline) === developments(b.headline) &&
+    numbers(a.headline) === numbers(b.headline);
+  // Require identical informative words. Punctuation, word order, stop words,
+  // and publication-day wrappers may differ; a new name or fact is retained.
+  if (sameFacts && similarity === 1) return "duplicate";
+  return "related";
+}

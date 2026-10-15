@@ -248,7 +248,7 @@ export const beatAdminMiddleware = createMiddleware({ type: 'request' }).server(
 
     try {
       const { db } = await import('@/lib/publishing/runtime.server');
-      const { existingBeatFingerprints, upsertBeatItem } = await import('@/lib/beat/db.server');
+      const { existingBeatFingerprints, existingBeatStories, upsertBeatItem } = await import('@/lib/beat/db.server');
       const { discoverPaBeatCandidates } = await import('@/lib/beat/discovery');
       const database = db();
       const fingerprints = await existingBeatFingerprints(database);
@@ -266,6 +266,7 @@ export const beatAdminMiddleware = createMiddleware({ type: 'request' }).server(
 
       const discovered = await discoverPaBeatCandidates({
         existingFingerprints: fingerprints,
+        existingStories: await existingBeatStories(database),
         newsUrls,
         perAccountLimit: parsed.data.perAccountLimit ?? 2,
       });
