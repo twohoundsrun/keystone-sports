@@ -1,5 +1,7 @@
 # Phase 4D — coverage-aware editorial feed discovery
 
+> Implementation audit below records the original environment. The later [PR #46 release-readiness audit](phase-4d-release-readiness.md) supersedes its network/source/CI observations and final validation counts. The release audit verified the canonical Crossing Broad endpoint, raised the decoded feed bound to 1 MiB, repaired npm 10 lockfile compatibility, and disabled Inquirer editorial intake pending publisher permission.
+
 ## Baseline and architecture audit
 
 The feature branch starts at master `3a412d41de316c07f704bd43cb8cea90304c66a0`. Git confirms PR #42 merged at `dbcb701`, PR #44 at `4772319`, and PR #45 at `3a412d4` (parent `59e32e4`). Thus the follow-up fixes are already in the baseline; this branch does not depend on an open PR #45. GitHub API requests are still proxy-denied, so merge evidence comes from actual remote Git commits/parents rather than API status.
@@ -82,7 +84,7 @@ Unavailable sources are not replaced with fragile scraping, unlicensed mirrors, 
 
 ## Freshness, reporting and cost controls
 
-- Maximum nine destinations, three concurrent requests, 3.5-second timeout through body reading, 256 KiB per response, first 100 parsed entries per source. No redirects are followed without registry review, and no immediate retries occur.
+- Maximum nine destinations, three concurrent requests, 3.5-second timeout through body reading, 1 MiB per decoded response, first 100 parsed entries per source. No redirects are followed without registry review, and no immediate retries occur.
 - A D1 conditional claim applies a **ten-minute shared cooldown**, including dry-runs. This is a manual-action request limit, not a cron-frequency change. A dry-run updates diagnostic metadata but inserts no cards; a subsequent request during cooldown returns the saved report without fetching or inserting. In-progress runs may not yet have a report.
 - Source `Retry-After` dates/seconds are saved and honored on later runs even after the shared cooldown expires. One bounded latest report/lease row is stored; no historical dashboard, cleanup job or recurring poller is added.
 - Publication age stays original. Articles older than 72 hours, undated/ambiguous dates, and more than five minutes in the future are excluded. Updates are evidence for inspecting an original, not permission to re-age it or rewrite it. Routine posts and out-of-coverage stories are filtered before scoring.

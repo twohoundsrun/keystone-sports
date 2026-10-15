@@ -448,3 +448,43 @@ test("invalid ISO calendar dates never roll over into fresh timestamps", () => {
   );
   assert.equal(row.published, "");
 });
+
+test("retained publisher feeds fit a bounded one-MiB intake budget", async () => {
+  const xml = rss([article("publisher-budget", "Eagles sign veteran quarterback")]).replace(
+    "</channel>",
+    `<description>${"x".repeat(600_000)}</description></channel>`,
+  );
+  const result = await discoverFeedCandidates(
+    options({
+      sources: [source("publisher", "eagles")],
+      fetchImpl: async () =>
+        new Response(xml, { headers: { "content-type": "application/rss+xml" } }),
+    }),
+  );
+  assert.equal(result.report.sources[0].state, "ok");
+  assert.equal(result.candidates.length, 1);
+  assert.equal(FEED_MAX_BYTES, 1024 * 1024);
+});
+
+test("editorial registry uses independently verified canonical Crossing Broad feed", async () => {
+  const { DISCOVERY_FEED_SOURCES } = await import("../src/lib/beat/feed-sources.ts");
+  assert.equal(
+    DISCOVERY_FEED_SOURCES.find((s) => s.url.includes("crossingbroad.com")).url,
+    "https://www.crossingbroad.com/feed/",
+  );
+});
+
+test("Inquirer editorial discovery waits for permission and reports why without fetching", async () => {
+  const { DISCOVERY_FEED_SOURCES } = await import("../src/lib/beat/feed-sources.ts");
+  const restricted = DISCOVERY_FEED_SOURCES.find((s) => s.url.includes("inquirer.com"));
+  const result = await discoverFeedCandidates(
+    options({
+      sources: [restricted],
+      fetchImpl: () => {
+        throw new Error("restricted publisher must never be requested");
+      },
+    }),
+  );
+  assert.equal(result.report.sources[0].state, "disabled");
+  assert.match(result.report.sources[0].error, /permission/i);
+});

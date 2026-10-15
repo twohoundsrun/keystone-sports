@@ -8,7 +8,8 @@ import {
   type EditorialCandidateInput,
 } from "./discovery";
 
-export const FEED_MAX_BYTES = 256 * 1024;
+// Verified retained feeds reach ~530 KiB; bound decoded bodies independently of compression.
+export const FEED_MAX_BYTES = 1024 * 1024;
 export const FEED_MAX_SOURCES = 9;
 // At most30 candidate SQL operations +6 coordination reads/writes +9 HTTP
 // requests, below the conservative50 subrequest/query budget for a manual run.
@@ -94,6 +95,7 @@ export async function discoverFeedCandidates(
       observations.push(observation);
       if (!source.enabled || source.verification === "pending") {
         observation.state = "disabled";
+        observation.error = source.disabledReason;
         continue;
       }
       const retryAfter = opts.backoff?.[source.id];
