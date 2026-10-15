@@ -47,21 +47,19 @@ export type BeatStoryReference = {
 };
 
 const HEADLINE_STOP_WORDS = new Set(
-  "a an the to of for in on at and as after with from by is has have will breaking report reports says sunday monday tuesday wednesday thursday friday saturday".split(
+  "a an the breaking report reports sunday monday tuesday wednesday thursday friday saturday".split(
     " ",
   ),
 );
 const DEVELOPMENT_WORDS =
   /\b(out|cleared|returns?|signed|traded|waived|activated|suspended|fired|hired|surgery|concussion|injury|doubtful|questionable|confirmed|denied|not|no|never|update|correction)\b/gi;
 
-function headlineWords(headline: string): Set<string> {
-  return new Set(
-    headline
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, " ")
-      .split(/\s+/)
-      .filter((word) => word && !HEADLINE_STOP_WORDS.has(word)),
-  );
+function headlineWords(headline: string): string[] {
+  return headline
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((word) => word && !HEADLINE_STOP_WORDS.has(word));
 }
 
 /**
@@ -84,8 +82,10 @@ export function beatStoryRelation(
     Math.abs(timeA - timeB) > 48 * 3_600_000
   )
     return null;
-  const wordsA = headlineWords(a.headline);
-  const wordsB = headlineWords(b.headline);
+  const tokensA = headlineWords(a.headline);
+  const tokensB = headlineWords(b.headline);
+  const wordsA = new Set(tokensA);
+  const wordsB = new Set(tokensB);
   if (Math.min(wordsA.size, wordsB.size) < 5) return null;
   const common = [...wordsA].filter((word) => wordsB.has(word)).length;
   const similarity = common / new Set([...wordsA, ...wordsB]).size;
@@ -96,8 +96,8 @@ export function beatStoryRelation(
   const sameFacts =
     developments(a.headline) === developments(b.headline) &&
     numbers(a.headline) === numbers(b.headline);
-  // Require identical informative words. Punctuation, word order, stop words,
-  // and publication-day wrappers may differ; a new name or fact is retained.
-  if (sameFacts && similarity === 1) return "duplicate";
+  // Preserve word relationships: reversing a winner or trade participants is
+  // a material change even if the unordered words and numbers match.
+  if (sameFacts && tokensA.join(" ") === tokensB.join(" ")) return "duplicate";
   return "related";
 }

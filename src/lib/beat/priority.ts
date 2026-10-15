@@ -45,6 +45,10 @@ const PROMO =
   /\b(giveaway|sweepstakes|promo code|merchandise|win tickets?|jersey giveaway|parlay|betting|sponsored)\b/i;
 const RUMOR = /\b(rumou?r|sources say|hearing|reportedly|per sources|could be)\b/i;
 
+export function hasUnconfirmedLanguage(text: string): boolean {
+  return RUMOR.test(text);
+}
+
 export function discoveryPriority(
   input: DiscoveryPriorityInput,
   now: Date = new Date(),
@@ -106,7 +110,7 @@ export function discoveryPriority(
     score -= 15;
     reasons.push("More than 36 hours old");
   }
-  if (RUMOR.test(input.text)) {
+  if (hasUnconfirmedLanguage(input.text)) {
     score -= 25;
     reasons.push("Unconfirmed language: manual verification required");
   }

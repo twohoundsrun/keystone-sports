@@ -123,7 +123,7 @@ export const beatAdminMiddleware = createMiddleware({ type: 'request' }).server(
 
     const cursorParam = url.searchParams.get('cursor');
     const cursor = cursorParam ? decodeBeatCursor(cursorParam) : null;
-    if (cursorParam && !cursor) return json({ ok: false, error: 'Invalid Beat queue cursor.' }, 422);
+    if (cursorParam && !cursor) return json({ ok: false, error: 'Invalid or outdated Beat queue cursor. Reload the desk to restart pagination.' }, 422);
 
     const limit = clampBeatQueueLimit(url.searchParams.get('limit'));
     const now = new Date();

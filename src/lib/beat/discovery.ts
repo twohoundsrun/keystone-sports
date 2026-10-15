@@ -13,7 +13,7 @@ import {
   beatStoryRelation,
   type BeatStoryReference,
 } from "./fingerprint";
-import { discoveryPriority } from "./priority";
+import { discoveryPriority, hasUnconfirmedLanguage } from "./priority";
 import { classifyBeatMedia } from "./allowlist";
 
 export type DiscoverAccount = {
@@ -170,7 +170,6 @@ export function shouldDiscardByScore(score: number): boolean {
 
 const BREAKING_HINT =
   /\b(breaking|ruled out|activated|signed|traded|waived|injury report|ir\b|pup\b|suspended)\b/i;
-const RUMOR_HINT = /\b(rumor|sources say|hearing|reportedly|per sources)\b/i;
 
 export function scoreDiscoveryCandidate(
   input: {
@@ -389,7 +388,7 @@ export function candidatesFromEditorialJson(
         suggestedContext:
           raw.suggestedContext ??
           raw.context ??
-          (RUMOR_HINT.test(text)
+          (hasUnconfirmedLanguage(text)
             ? "Rumor language detected — keep pending and label before any approve."
             : `Editorial candidate (priority ${relevanceScore}/100). Desk: confirm category, Keystone Beat context, and expiration before approve.`),
         headline: truncateHeadline(headline, 140),
@@ -479,7 +478,7 @@ export async function discoverPaBeatCandidates(opts: DiscoverOptions = {}): Prom
           timestamp,
           sourceTier: account.sourceTier,
           verifiedOfficial: account.verifiedOfficial,
-          suggestedContext: RUMOR_HINT.test(text)
+          suggestedContext: hasUnconfirmedLanguage(text)
             ? "Rumor language detected — keep pending and label before any approve."
             : `Candidate from @${account.handle}. Desk: confirm category, Keystone Beat context, and expiration before approve.`,
           headline: truncateHeadline(stripTags(oembed?.html ?? `@${account.handle} update`), 140),

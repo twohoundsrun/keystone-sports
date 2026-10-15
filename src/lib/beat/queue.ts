@@ -51,8 +51,8 @@ export function isBeatQueueStatus(value: unknown): value is BeatQueueStatus {
  */
 export type BeatQueueCursor = {
   bucket: 0 | 1;
-  /** Stored pending relevance; absent only on pre-priority cursors. */
-  priority?: number;
+  /** Stored pending relevance; old cursors must restart pagination. */
+  priority: number;
   updatedAt: string;
   id: string;
 };
@@ -86,16 +86,12 @@ export function decodeBeatCursor(raw: string | null | undefined): BeatQueueCurso
   if (rec.b !== 0 && rec.b !== 1) return null;
   if (typeof rec.u !== "string" || rec.u.length === 0) return null;
   if (typeof rec.i !== "string" || rec.i.length === 0) return null;
-  if (
-    rec.p !== undefined &&
-    (typeof rec.p !== "number" || !Number.isFinite(rec.p) || rec.p < 0 || rec.p > 100)
-  )
-    return null;
+  if (typeof rec.p !== "number" || !Number.isFinite(rec.p) || rec.p < 0 || rec.p > 100) return null;
   return {
     bucket: rec.b,
     updatedAt: rec.u,
     id: rec.i,
-    ...(rec.p !== undefined ? { priority: rec.p as number } : {}),
+    priority: rec.p,
   };
 }
 

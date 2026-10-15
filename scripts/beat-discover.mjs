@@ -55,7 +55,9 @@ function loadHelpers() {
   )
     .replace(/^import\s+[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, "")
     .replace(/\bexport /g, "");
-  const priority = new Function(`${priorityCode}\nreturn { discoveryPriority };`)();
+  const priority = new Function(
+    `${priorityCode}\nreturn { discoveryPriority, hasUnconfirmedLanguage };`,
+  )();
 
   const discCode = stripTypeScriptTypes(readFileSync(discoveryPath, "utf8"), { mode: "transform" })
     .replace(/^import\s+type[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, "")
@@ -66,6 +68,7 @@ function loadHelpers() {
     "classifyBeatMedia",
     "beatStoryRelation",
     "discoveryPriority",
+    "hasUnconfirmedLanguage",
     `${discCode}\nreturn { discoverPaBeatCandidates, candidatesFromEditorialJson, PA_BEAT_DISCOVERY_ACCOUNTS, scoreDiscoveryCandidate, scoreBandForRelevance };`,
   )(
     fp.beatDuplicateFingerprint,

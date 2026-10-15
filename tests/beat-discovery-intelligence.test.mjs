@@ -22,7 +22,7 @@ const fingerprints = load(
   ["beatDuplicateFingerprint", "beatStoryRelation"],
   allow,
 );
-const priority = load("src/lib/beat/priority.ts", ["discoveryPriority"]);
+const priority = load("src/lib/beat/priority.ts", ["discoveryPriority", "hasUnconfirmedLanguage"]);
 const discovery = load(
   "src/lib/beat/discovery.ts",
   ["candidatesFromEditorialJson", "discoverPaBeatCandidates", "dedupeDiscoveryStories"],
@@ -216,4 +216,35 @@ test("legacy manual discovery uses encoded post age and never invents a story wh
   assert.ok(result.candidates[0].relevanceScore > result.candidates[1].relevanceScore);
   assert.equal(result.errors.length, 1);
   assert.match(result.errors[0], /No readable post content/);
+});
+
+test("rumour and could-be signals produce matching editorial verification guidance", () => {
+  const original = fixture.candidates.find((c) => c.id === "injury");
+  const result = discovery.candidatesFromEditorialJson(
+    [{ ...original, headline: "Rumour: Eagles could be signing a veteran quarterback" }],
+    { now },
+  );
+  assert.match(result.candidates[0].suggestedContext, /Rumor language detected/);
+  assert.ok(
+    result.candidates[0].priorityReasons.some((reason) => reason.includes("Unconfirmed language")),
+  );
+});
+
+test("reordered participants and results survive as related developments", () => {
+  const reference = { originalUrl: url("first"), teamSlug: "flyers", timestamp: fixture.now };
+  for (const [headline, followup] of [
+    [
+      "Flyers beat Penguins in dramatic overtime playoff victory",
+      "Penguins beat Flyers in dramatic overtime playoff victory",
+    ],
+    ["Eagles trade Smith to Steelers for Brown", "Eagles trade Brown to Steelers for Smith"],
+  ]) {
+    assert.equal(
+      fingerprints.beatStoryRelation(
+        { ...reference, headline },
+        { ...reference, originalUrl: url("second"), headline: followup },
+      ),
+      "related",
+    );
+  }
 });

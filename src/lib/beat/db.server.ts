@@ -90,8 +90,8 @@ export async function listBeatItemsPage(
     args.push(
       cursor.bucket,
       cursor.bucket,
-      cursor.priority ?? 0,
-      cursor.priority ?? 0,
+      cursor.priority,
+      cursor.priority,
       cursor.updatedAt,
       cursor.updatedAt,
       cursor.id,

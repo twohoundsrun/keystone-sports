@@ -167,14 +167,14 @@ async function walkAllPages(database, status) {
 // --- Cursor + limit primitives ---
 
 test('cursor round-trips and rejects malformed input', () => {
-  const cursor = { bucket: 1, updatedAt: '2026-10-01T00:00:00.000Z', id: 'abc' };
+  const cursor = { bucket: 1, priority: 0, updatedAt: '2026-10-01T00:00:00.000Z', id: 'abc' };
   const encoded = queue.encodeBeatCursor(cursor);
   assert.match(encoded, /^[A-Za-z0-9_-]+$/);
   assert.deepEqual(queue.decodeBeatCursor(encoded), cursor);
   assert.equal(queue.decodeBeatCursor('not-base64!!'), null);
   assert.equal(queue.decodeBeatCursor(null), null);
   assert.equal(queue.decodeBeatCursor(''), null);
-  assert.equal(queue.decodeBeatCursor(queue.encodeBeatCursor({ bucket: 0, updatedAt: '', id: 'x' })), null);
+  assert.equal(queue.decodeBeatCursor(queue.encodeBeatCursor({ bucket: 0, priority: 0, updatedAt: '', id: 'x' })), null);
 });
 
 test('limit clamps to a safe 1..100 range with a default', () => {
@@ -345,4 +345,10 @@ test("priority cursors validate score and round-trip numeric ties", () => {
   const cursor = { bucket: 0, priority: 88, updatedAt: "2026-10-14T16:00:00.000Z", id: "item" };
   assert.deepEqual(queue.decodeBeatCursor(queue.encodeBeatCursor(cursor)), cursor);
   assert.equal(queue.decodeBeatCursor(queue.encodeBeatCursor({ ...cursor, priority: 101 })), null);
+});
+
+test("pre-priority cursors are rejected instead of silently skipping scored stories", () => {
+  const old = btoa(JSON.stringify({ b: 0, u: "2026-10-01T00:00:00Z", i: "old-item" }));
+  assert.equal(queue.decodeBeatCursor(old), null);
+  assert.match(readFileSync("src/lib/beat-admin-middleware.ts", "utf8"), /Reload the desk to restart pagination/);
 });

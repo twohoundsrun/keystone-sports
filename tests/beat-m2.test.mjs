@@ -42,7 +42,7 @@ const discovery = load(
   {
     beatDuplicateFingerprint: fp.beatDuplicateFingerprint,
     beatStoryRelation: fp.beatStoryRelation,
-    discoveryPriority: load('src/lib/beat/priority.ts', ['discoveryPriority']).discoveryPriority,
+    ...load('src/lib/beat/priority.ts', ['discoveryPriority', 'hasUnconfirmedLanguage']),
     classifyBeatMedia: allow.classifyBeatMedia,
   },
 );
