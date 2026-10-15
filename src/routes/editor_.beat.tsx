@@ -434,7 +434,7 @@ function BeatEditorPage() {
                         ) : null}
                         {typeof item.relevanceScore === "number" ? <span>score {item.relevanceScore}</span> : null}
                       </div>
-                      <p className="mt-2 font-display text-xl tracking-wide">{item.headline}</p>
+                      <p className="mt-2 break-words font-display text-xl tracking-wide">{item.headline}</p>
                       {item.approvalStatus === "pending" && item.priorityReasons?.length ? (
                         <p className="mt-1 text-xs text-muted">
                           Priority signals: {item.priorityReasons.join("; ")}.
@@ -564,7 +564,7 @@ function BeatEditorPage() {
             {preview ? (
               <div className="mt-3 space-y-2 text-sm">
                 <p className="font-semibold uppercase tracking-wider text-muted">{BEAT_CATEGORY_LABELS[preview.category]}</p>
-                <p className="font-display text-xl">{preview.headline}</p>
+                <p className="break-words font-display text-xl">{preview.headline}</p>
                 <p className="text-muted">{preview.context}</p>
                 <p className="text-xs text-subtle">{preview.mediaType} · {preview.originalUrl}</p>
                 {preview.embedUrl ? <p className="text-xs break-all text-subtle">embed {preview.embedUrl}</p> : null}

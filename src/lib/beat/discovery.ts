@@ -391,7 +391,9 @@ export function candidatesFromEditorialJson(
           (hasUnconfirmedLanguage(text)
             ? "Rumor language detected — keep pending and label before any approve."
             : `Editorial candidate (priority ${relevanceScore}/100). Desk: confirm category, Keystone Beat context, and expiration before approve.`),
-        headline: truncateHeadline(headline, 140),
+        // Keep the complete source headline: a material follow-up can appear
+        // after a shared introduction. Presentation must not become dedupe data.
+        headline,
         source: raw.source ?? account,
         mediaType: media.mediaType,
         embedUrl: media.embedUrl,
@@ -481,7 +483,7 @@ export async function discoverPaBeatCandidates(opts: DiscoverOptions = {}): Prom
           suggestedContext: hasUnconfirmedLanguage(text)
             ? "Rumor language detected — keep pending and label before any approve."
             : `Candidate from @${account.handle}. Desk: confirm category, Keystone Beat context, and expiration before approve.`,
-          headline: truncateHeadline(stripTags(oembed?.html ?? `@${account.handle} update`), 140),
+          headline: stripTags(oembed.html),
           source: account.source,
           mediaType: media.mediaType,
           embedUrl: media.embedUrl,
