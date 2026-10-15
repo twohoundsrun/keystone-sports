@@ -90,6 +90,10 @@ export function beatStoryRelation(
   const common = [...wordsA].filter((word) => wordsB.has(word)).length;
   const similarity = common / new Set([...wordsA, ...wordsB]).size;
   if (similarity < 0.4) return null;
+  // Historical rows may contain only a shortened prefix. That cannot prove
+  // two different URLs carry the same development. URL identity above remains exact.
+  if (/…$|\.\.\.$/.test(a.headline.trim()) || /…$|\.\.\.$/.test(b.headline.trim()))
+    return "related";
   const developments = (text: string) =>
     [...new Set(text.toLowerCase().match(DEVELOPMENT_WORDS) ?? [])].sort().join(" ");
   const numbers = (text: string) => (text.match(/\d+/g) ?? []).join(" ");

@@ -266,3 +266,57 @@ test("operator CLI loads the same scoring and verification helpers", () => {
   assert.equal(result.skippedDuplicates, 3);
   assert.equal(result.discarded, 1);
 });
+
+test("long-headline follow-ups retain material developments beyond the display prefix", () => {
+  const prefix =
+    "Eagles medical staff and coaching team issued a detailed statement about quarterback availability following the latest examination and practice assessment ";
+  const original = {
+    ...fixture.candidates.find((c) => c.id === "injury"),
+    headline: prefix + "ruled out after concussion",
+  };
+  const followup = {
+    ...original,
+    originalUrl: url("long-followup"),
+    headline: prefix + "cleared to return after concussion",
+  };
+  const batch = discovery.candidatesFromEditorialJson([original, followup], { now });
+  assert.equal(batch.candidates.length, 2);
+  assert.equal(batch.skippedDuplicates, 0);
+  assert.ok(batch.candidates.some((c) => c.headline.endsWith("ruled out after concussion")));
+  assert.ok(
+    batch.candidates.some((c) => c.headline.endsWith("cleared to return after concussion")),
+  );
+  const later = discovery.candidatesFromEditorialJson([followup], {
+    now,
+    existingStories: [batch.candidates.find((c) => c.originalUrl === original.originalUrl)],
+  });
+  assert.equal(later.candidates.length, 1);
+  const legacy = { ...original, headline: prefix.slice(0, 139) + "…" };
+  assert.equal(
+    fingerprints.beatStoryRelation(legacy, { ...legacy, originalUrl: url("legacy-copy") }),
+    "related",
+  );
+});
+
+test("existing custom fingerprints still contribute global canonical provider keys", async () => {
+  const helpers = load("src/lib/beat/db.server.ts", ["existingBeatFingerprints"], {
+    normalizeBeatUrl: allow.normalizeBeatUrl,
+    beatDuplicateFingerprint: fingerprints.beatDuplicateFingerprint,
+  });
+  const rows = [
+    { url: "https://twitter.com/Fixture/status/2000000000000000045", fp: "custom:historic" },
+    { url: "https://youtu.be/abcdefghijk", fp: "custom:video" },
+  ];
+  const keys = await helpers.existingBeatFingerprints({
+    prepare() {
+      return {
+        async all() {
+          return { results: rows };
+        },
+      };
+    },
+  });
+  assert.ok(keys.has("x:2000000000000000045"));
+  assert.ok(keys.has("yt:abcdefghijk"));
+  assert.ok(keys.has("custom:historic"), "legacy operator identities remain supported");
+});

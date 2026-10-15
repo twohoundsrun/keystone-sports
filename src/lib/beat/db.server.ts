@@ -261,6 +261,9 @@ export async function existingBeatFingerprints(database: Database): Promise<Set<
   const set = new Set<string>();
   for (const r of results) {
     if (r.fp) set.add(r.fp);
+    // Legacy operator keys must not hide the provider identity outside the
+    // bounded recent-headline window (e.g. X/Twitter aliases of an old post).
+    set.add(beatDuplicateFingerprint({ originalUrl: r.url }));
     const n = normalizeBeatUrl(r.url);
     if (n) set.add(`url:${n.toLowerCase()}`);
   }
