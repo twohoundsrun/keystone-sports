@@ -75,6 +75,7 @@ function loadHelpers() {
     allow.classifyBeatMedia,
     fp.beatStoryRelation,
     priority.discoveryPriority,
+    priority.hasUnconfirmedLanguage,
   );
 
   return discovery;

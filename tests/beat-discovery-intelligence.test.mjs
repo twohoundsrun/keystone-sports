@@ -1,4 +1,5 @@
 import test from "node:test";
+import { execFileSync } from "node:child_process";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
@@ -247,4 +248,21 @@ test("reordered participants and results survive as related developments", () =>
       "related",
     );
   }
+});
+
+test("operator CLI loads the same scoring and verification helpers", () => {
+  const shift = Date.now() - now.getTime();
+  const candidates = fixture.candidates.map((candidate) => ({
+    ...candidate,
+    timestamp: new Date(Date.parse(candidate.timestamp) + shift).toISOString(),
+  }));
+  const output = execFileSync(process.execPath, ["scripts/beat-discover.mjs"], {
+    input: JSON.stringify(candidates),
+    encoding: "utf8",
+  });
+  const result = JSON.parse(output);
+  assert.deepEqual(result.errors, []);
+  assert.equal(result.candidates.length, 16);
+  assert.equal(result.skippedDuplicates, 3);
+  assert.equal(result.discarded, 1);
 });
