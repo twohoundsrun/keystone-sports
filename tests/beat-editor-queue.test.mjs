@@ -2,14 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
+import { DatabaseSync } from 'node:sqlite';
 
 /**
  * Part A — editor queue pagination + status filters.
  *
  * The D1 database is not available offline, so `listBeatItemsPage` is exercised
- * against a small in-memory mock that reproduces the ordering / keyset / LIMIT
- * semantics of the generated SQL. Source-level assertions pin the SQL shape so
- * the mock and the query cannot silently diverge.
+ * against an in-memory SQLite database executing the real ordering / keyset / LIMIT
+ * SQL. Status counts and recent job runs use small fixture adapters.
  */
 
 function load(path, names, inject = {}) {
@@ -31,7 +31,10 @@ const queue = load('src/lib/beat/queue.ts', [
 ]);
 const row = load('src/lib/beat/row.ts', ['rowToBeatItem', 'BEAT_ITEM_COLUMNS']);
 const diagnostics = load('src/lib/beat/diagnostics.ts', ['deriveBeatOperationalState', 'classifyLastExpireRun', 'deriveBeatReviewBacklog']);
+const priority = load('src/lib/beat/priority.ts', ['discoveryPriority']);
 const db = load('src/lib/beat/db.server.ts', ['listBeatItemsPage', 'countBeatItemsByStatus'], {
+  discoveryPriority: priority.discoveryPriority,
+  beatStoryRelation: () => null,
   BEAT_ITEM_COLUMNS: row.BEAT_ITEM_COLUMNS,
   rowToBeatItem: row.rowToBeatItem,
   beatDuplicateFingerprint: (input) => `fp:${input.originalUrl}`,
@@ -111,40 +114,21 @@ function makeDb(rows, jobRuns = null) {
 }
 
 function selectRows(allRows, text, bound) {
-  const isAll = /CASE WHEN approval_status = 'pending' THEN 0 ELSE 1 END/.test(text);
-  const hasStatusFilter = /WHERE approval_status = \?/.test(text);
-  const hasCursor = /updated_at < \?/.test(text);
-  let i = 0;
-  const status = hasStatusFilter ? bound[i++] : null;
-  let cursor = null;
-  if (hasCursor) {
-    const bucket = isAll ? bound[i++] : 0;
-    if (isAll) i++; // second rank placeholder
-    const updatedAt = bound[i++];
-    i++; // duplicate updatedAt
-    const id = bound[i++];
-    cursor = { bucket, updatedAt, id };
-  }
-  const limit = bound[bound.length - 1];
-
-  let list = allRows.map((r) => ({ ...r, queue_rank: r.approval_status === 'pending' ? 0 : 1 }));
-  if (status != null) list = list.filter((r) => r.approval_status === status);
-  list.sort(
-    (a, b) =>
-      a.queue_rank - b.queue_rank ||
-      (a.updated_at < b.updated_at ? 1 : a.updated_at > b.updated_at ? -1 : 0) ||
-      (a.id < b.id ? 1 : a.id > b.id ? -1 : 0),
-  );
-  if (cursor) {
-    list = list.filter((r) =>
-      isAll
-        ? r.queue_rank > cursor.bucket ||
-          (r.queue_rank === cursor.bucket &&
-            (r.updated_at < cursor.updatedAt || (r.updated_at === cursor.updatedAt && r.id < cursor.id)))
-        : r.updated_at < cursor.updatedAt || (r.updated_at === cursor.updatedAt && r.id < cursor.id),
+  // Execute the real generated SQL rather than teaching a mock how it sorts.
+  const sqlite = new DatabaseSync(":memory:");
+  try {
+    const columns = Object.keys(rowValues(0));
+    sqlite.exec(
+      `CREATE TABLE beat_items (${columns.map((key) => `${key} ${key === "relevance_score" ? "REAL" : "TEXT"}`).join(", ")})`,
     );
+    const insert = sqlite.prepare(
+      `INSERT INTO beat_items VALUES (${columns.map(() => "?").join(", ")})`,
+    );
+    for (const item of allRows) insert.run(...columns.map((key) => item[key] ?? null));
+    return sqlite.prepare(text).all(...bound);
+  } finally {
+    sqlite.close();
   }
-  return list.slice(0, limit);
 }
 
 function computeCounts(rows, bound) {
@@ -183,14 +167,14 @@ async function walkAllPages(database, status) {
 // --- Cursor + limit primitives ---
 
 test('cursor round-trips and rejects malformed input', () => {
-  const cursor = { bucket: 1, updatedAt: '2026-10-01T00:00:00.000Z', id: 'abc' };
+  const cursor = { bucket: 1, priority: 0, updatedAt: '2026-10-01T00:00:00.000Z', id: 'abc' };
   const encoded = queue.encodeBeatCursor(cursor);
   assert.match(encoded, /^[A-Za-z0-9_-]+$/);
   assert.deepEqual(queue.decodeBeatCursor(encoded), cursor);
   assert.equal(queue.decodeBeatCursor('not-base64!!'), null);
   assert.equal(queue.decodeBeatCursor(null), null);
   assert.equal(queue.decodeBeatCursor(''), null);
-  assert.equal(queue.decodeBeatCursor(queue.encodeBeatCursor({ bucket: 0, updatedAt: '', id: 'x' })), null);
+  assert.equal(queue.decodeBeatCursor(queue.encodeBeatCursor({ bucket: 0, priority: 0, updatedAt: '', id: 'x' })), null);
 });
 
 test('limit clamps to a safe 1..100 range with a default', () => {
@@ -307,7 +291,7 @@ test('paginated SQL keeps the status filter, keyset predicate, and pending-first
   const source = readFileSync('src/lib/beat/db.server.ts', 'utf8');
   assert.match(source, /WHERE approval_status = \?/);
   assert.match(source, /updated_at < \? OR \(updated_at = \? AND id < \?\)/);
-  assert.match(source, /ORDER BY queue_rank ASC, updated_at DESC, id DESC/);
+  assert.match(source, /ORDER BY queue_rank ASC, queue_priority DESC, updated_at DESC, id DESC/);
   assert.match(source, /CASE WHEN approval_status = 'pending' THEN 0 ELSE 1 END/);
 });
 
@@ -318,4 +302,53 @@ test('the public Beat feed shape never exposes admin queue metadata', () => {
   const source = readFileSync('src/lib/beat/db.server.ts', 'utf8');
   const publicRows = source.slice(source.indexOf('export async function listPublicBeatRows'), source.indexOf('export async function getBeatItemById'));
   assert.match(publicRows, /approval_status = 'approved'/);
+});
+
+test("pending priority applies before LIMIT and survives keyset pagination with ties and null scores", async () => {
+  const rows = Array.from({ length: 240 }, (_, i) =>
+    rowValues(i, {
+      relevance_score: i % 5 === 0 ? null : (i % 4) * 25,
+      approval_status: i % 7 === 0 ? "approved" : "pending",
+    }),
+  );
+  // Strongest row is also oldest: sorting only the current page would miss it.
+  rows[239].relevance_score = 100;
+  rows[239].approval_status = "pending";
+  const database = makeDb(rows);
+  for (const status of ["all", "pending"]) {
+    const first = await db.listBeatItemsPage(database, { status, limit: 7 });
+    assert.equal(first.items[0].id, rows[239].id);
+    assert.equal(
+      queue.decodeBeatCursor(first.nextCursor).priority,
+      first.items.at(-1).relevanceScore ?? 0,
+    );
+    const ids = await walkAllPages(database, status);
+    const expected = rows
+      .filter((r) => status === "all" || r.approval_status === status)
+      .sort(
+        (a, b) =>
+          Number(a.approval_status !== "pending") - Number(b.approval_status !== "pending") ||
+          (b.approval_status === "pending" ? (b.relevance_score ?? 0) : 0) -
+            (a.approval_status === "pending" ? (a.relevance_score ?? 0) : 0) ||
+          b.updated_at.localeCompare(a.updated_at) ||
+          b.id.localeCompare(a.id),
+      );
+    assert.deepEqual(
+      ids,
+      expected.map((r) => r.id),
+    );
+    assert.equal(new Set(ids).size, ids.length);
+  }
+});
+
+test("priority cursors validate score and round-trip numeric ties", () => {
+  const cursor = { bucket: 0, priority: 88, updatedAt: "2026-10-14T16:00:00.000Z", id: "item" };
+  assert.deepEqual(queue.decodeBeatCursor(queue.encodeBeatCursor(cursor)), cursor);
+  assert.equal(queue.decodeBeatCursor(queue.encodeBeatCursor({ ...cursor, priority: 101 })), null);
+});
+
+test("pre-priority cursors are rejected instead of silently skipping scored stories", () => {
+  const old = btoa(JSON.stringify({ b: 0, u: "2026-10-01T00:00:00Z", i: "old-item" }));
+  assert.equal(queue.decodeBeatCursor(old), null);
+  assert.match(readFileSync("src/lib/beat-admin-middleware.ts", "utf8"), /Reload the desk to restart pagination/);
 });

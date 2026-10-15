@@ -209,7 +209,7 @@ export const discoverBeatCandidates = createServerFn({ method: "POST" })
     const { db, requireAdmin } = await import("../publishing/runtime.server");
     const adminId = requireAdmin();
     const database = db();
-    const { existingBeatFingerprints, upsertBeatItem } = await import("./db.server");
+    const { existingBeatFingerprints, existingBeatStories, upsertBeatItem } = await import("./db.server");
     const { discoverPaBeatCandidates } = await import("./discovery");
     const fingerprints = await existingBeatFingerprints(database);
     // Dedupe vs recent Keystone News links when available.
@@ -226,6 +226,7 @@ export const discoverBeatCandidates = createServerFn({ method: "POST" })
     }
     const discovered = await discoverPaBeatCandidates({
       existingFingerprints: fingerprints,
+      existingStories: await existingBeatStories(database),
       newsUrls,
       perAccountLimit: data.perAccountLimit ?? 2,
     });

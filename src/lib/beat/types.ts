@@ -55,6 +55,9 @@ export type BeatItem = {
   /** Discovery scoring (candidates); optional on curated rows. */
   relevanceScore?: number;
   duplicateFingerprint?: string;
+  /** Advisory metadata derived at read time; never changes approval. */
+  priorityReasons?: string[];
+  relatedStoryUrl?: string;
   createdAt: string;
   updatedAt: string;
   createdBy: string;
@@ -133,6 +136,8 @@ export type BeatDiscoveryCandidate = {
   embedId?: string;
   oembedHtml?: string;
   relevanceScore: number;
+  priorityReasons?: string[];
+  relatedStoryUrl?: string;
   duplicateFingerprint: string;
   proposedExpiration?: string;
   league?: string;

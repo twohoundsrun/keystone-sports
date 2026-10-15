@@ -404,6 +404,7 @@ function BeatEditorPage() {
       <div className="mt-8 grid gap-8 lg:grid-cols-[1.2fr_1fr]">
         <section>
           <h2 className="font-display text-2xl">Queue</h2>
+          <p className="mt-1 text-sm text-muted">Pending stories appear by discovery score, then latest update. Review freshness and related coverage before approval.</p>
           {viewState === "empty" && !loading ? (
             <p className="mt-3 text-sm text-muted">No items in this filter. Seed with <code>npm run beat:seed</code> or add a URL below.</p>
           ) : null}
@@ -434,6 +435,21 @@ function BeatEditorPage() {
                         {typeof item.relevanceScore === "number" ? <span>score {item.relevanceScore}</span> : null}
                       </div>
                       <p className="mt-2 font-display text-xl tracking-wide">{item.headline}</p>
+                      {item.approvalStatus === "pending" && item.priorityReasons?.length ? (
+                        <p className="mt-1 text-xs text-muted">
+                          Priority signals: {item.priorityReasons.join("; ")}.
+                        </p>
+                      ) : null}
+                      {item.approvalStatus === "pending" && item.relatedStoryUrl ? (
+                        <a
+                          className="mt-1 inline-block text-xs underline focus-visible:outline-2 focus-visible:outline-offset-2"
+                          href={item.relatedStoryUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Related coverage — compare developments (opens in a new tab)
+                        </a>
+                      ) : null}
                       {item.context ? <p className="mt-1 text-sm text-muted">{item.context}</p> : <p className="mt-1 text-sm text-warn">Add the Pennsylvania consequence before approval.</p>}
                       <p className="mt-2 text-xs text-subtle">
                         {item.source} · {item.authorAccount}

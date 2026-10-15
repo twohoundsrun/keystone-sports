@@ -58,6 +58,7 @@ function buildIngest(upsertImpl) {
     beatDuplicateFingerprint: (input) => `fp:${input.originalUrl}`,
     upsertBeatItem: upsertImpl,
     existingBeatFingerprints: async () => new Set(),
+    existingBeatStories: async () => [],
     isBeatUniquenessConflict: errors.isBeatUniquenessConflict,
     BEAT_ITEM_COLUMNS: 'id, original_url',
     rowToBeatItem: (r) => r,

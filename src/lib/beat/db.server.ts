@@ -2,7 +2,12 @@
 
 import type { BeatItem, BeatCategory, ApprovalStatus } from "./types";
 import { BEAT_ITEM_COLUMNS, rowToBeatItem, type BeatItemRow } from "./row";
-import { beatDuplicateFingerprint } from "./fingerprint";
+import {
+  beatDuplicateFingerprint,
+  beatStoryRelation,
+  type BeatStoryReference,
+} from "./fingerprint";
+import { discoveryPriority } from "./priority";
 import { classifyBeatMedia, normalizeBeatUrl } from "./allowlist";
 import {
   BEAT_QUEUE_DEFAULT_LIMIT,
@@ -26,14 +31,21 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-export async function listBeatItems(database: Database, opts?: { status?: ApprovalStatus | "all" }): Promise<BeatItem[]> {
+export async function listBeatItems(
+  database: Database,
+  opts?: { status?: ApprovalStatus | "all" },
+): Promise<BeatItem[]> {
   const status = opts?.status ?? "all";
   const stmt =
     status === "all"
-      ? database.prepare(`SELECT ${BEAT_ITEM_COLUMNS} FROM beat_items ORDER BY updated_at DESC LIMIT 200`)
-      : database.prepare(
-          `SELECT ${BEAT_ITEM_COLUMNS} FROM beat_items WHERE approval_status = ? ORDER BY updated_at DESC LIMIT 200`,
-        ).bind(status);
+      ? database.prepare(
+          `SELECT ${BEAT_ITEM_COLUMNS} FROM beat_items ORDER BY updated_at DESC LIMIT 200`,
+        )
+      : database
+          .prepare(
+            `SELECT ${BEAT_ITEM_COLUMNS} FROM beat_items WHERE approval_status = ? ORDER BY updated_at DESC LIMIT 200`,
+          )
+          .bind(status);
   const { results } = await stmt.all<BeatItemRow>();
   return results.map(rowToBeatItem);
 }
@@ -47,7 +59,7 @@ export type BeatQueuePage = {
 /**
  * Status-filtered, keyset-paginated editor queue. The status filter runs in SQL
  * BEFORE the LIMIT so older records are reachable and pending items always sort
- * first in the "all" view. Ordering is deterministic (updated_at DESC, id DESC)
+ * first in the "all" view. Ordering is deterministic (pending score DESC, updated_at DESC, id DESC)
  * with the pending bucket as the primary key, so pages never duplicate or omit
  * rows for a stable dataset.
  */
@@ -60,58 +72,40 @@ export async function listBeatItemsPage(
   const size = clampBeatQueueLimit(opts?.limit ?? BEAT_QUEUE_DEFAULT_LIMIT);
   const fetchSize = size + 1; // one extra row tells us whether another page exists
 
-  let rows: (BeatItemRow & { queue_rank: number })[];
-  if (status === "all") {
-    const rank = "(CASE WHEN approval_status = 'pending' THEN 0 ELSE 1 END)";
-    rows = cursor
-      ? (
-          await database
-            .prepare(
-              `SELECT ${BEAT_ITEM_COLUMNS}, ${rank} AS queue_rank FROM beat_items
-               WHERE (${rank} > ?)
-                  OR (${rank} = ? AND (updated_at < ? OR (updated_at = ? AND id < ?)))
-               ORDER BY queue_rank ASC, updated_at DESC, id DESC
-               LIMIT ?`,
-            )
-            .bind(cursor.bucket, cursor.bucket, cursor.updatedAt, cursor.updatedAt, cursor.id, fetchSize)
-            .all<BeatItemRow & { queue_rank: number }>()
-        ).results
-      : (
-          await database
-            .prepare(
-              `SELECT ${BEAT_ITEM_COLUMNS}, ${rank} AS queue_rank FROM beat_items
-               ORDER BY queue_rank ASC, updated_at DESC, id DESC
-               LIMIT ?`,
-            )
-            .bind(fetchSize)
-            .all<BeatItemRow & { queue_rank: number }>()
-        ).results;
-  } else {
-    rows = cursor
-      ? (
-          await database
-            .prepare(
-              `SELECT ${BEAT_ITEM_COLUMNS}, 0 AS queue_rank FROM beat_items
-               WHERE approval_status = ?
-                 AND (updated_at < ? OR (updated_at = ? AND id < ?))
-               ORDER BY updated_at DESC, id DESC
-               LIMIT ?`,
-            )
-            .bind(status, cursor.updatedAt, cursor.updatedAt, cursor.id, fetchSize)
-            .all<BeatItemRow & { queue_rank: number }>()
-        ).results
-      : (
-          await database
-            .prepare(
-              `SELECT ${BEAT_ITEM_COLUMNS}, 0 AS queue_rank FROM beat_items
-               WHERE approval_status = ?
-               ORDER BY updated_at DESC, id DESC
-               LIMIT ?`,
-            )
-            .bind(status, fetchSize)
-            .all<BeatItemRow & { queue_rank: number }>()
-        ).results;
+  const rank = status === "all" ? "(CASE WHEN approval_status = 'pending' THEN 0 ELSE 1 END)" : "0";
+  // Rank in SQL before LIMIT, so a strong candidate on a later page is not
+  // hidden by newer, low-value rows. Non-pending views keep their old order.
+  const priority =
+    "(CASE WHEN approval_status = 'pending' THEN COALESCE(relevance_score, 0) ELSE 0 END)";
+  const conditions: string[] = [];
+  const args: (string | number)[] = [];
+  if (status !== "all") {
+    conditions.push("approval_status = ?");
+    args.push(status);
   }
+  if (cursor) {
+    conditions.push(
+      `(${rank} > ? OR (${rank} = ? AND (${priority} < ? OR (${priority} = ? AND (updated_at < ? OR (updated_at = ? AND id < ?))))))`,
+    );
+    args.push(
+      cursor.bucket,
+      cursor.bucket,
+      cursor.priority,
+      cursor.priority,
+      cursor.updatedAt,
+      cursor.updatedAt,
+      cursor.id,
+    );
+  }
+  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+  const { results: rows } = await database
+    .prepare(
+      `SELECT ${BEAT_ITEM_COLUMNS}, ${rank} AS queue_rank, ${priority} AS queue_priority FROM beat_items
+     ${where}
+     ORDER BY queue_rank ASC, queue_priority DESC, updated_at DESC, id DESC LIMIT ?`,
+    )
+    .bind(...args, fetchSize)
+    .all<BeatItemRow & { queue_rank: number; queue_priority: number }>();
 
   const hasMore = rows.length > size;
   const pageRows = hasMore ? rows.slice(0, size) : rows;
@@ -120,12 +114,25 @@ export async function listBeatItemsPage(
     hasMore && last
       ? encodeBeatCursor({
           bucket: last.queue_rank === 0 ? 0 : 1,
+          priority: last.queue_priority,
           updatedAt: last.updated_at,
           id: last.id,
         })
       : null;
 
-  return { items: pageRows.map(rowToBeatItem), nextCursor, limit: size };
+  const items = pageRows.map(rowToBeatItem);
+  const stories = items.some((item) => item.approvalStatus === "pending")
+    ? await existingBeatStories(database)
+    : [];
+  for (const item of items) {
+    if (item.approvalStatus !== "pending") continue;
+    item.priorityReasons = discoveryPriority({ ...item, text: item.headline }).reasons;
+    const related = stories.find(
+      (story) => story.originalUrl !== item.originalUrl && beatStoryRelation(item, story) !== null,
+    );
+    if (related) item.relatedStoryUrl = related.originalUrl;
+  }
+  return { items, nextCursor, limit: size };
 }
 
 function count(value: unknown): number {
@@ -138,7 +145,10 @@ function count(value: unknown): number {
  * reuses the exact Phase 4A semantics: pending AND (>= 48h old OR expires_at
  * already passed). Presentation only — approval_status is never mutated.
  */
-export async function countBeatItemsByStatus(database: Database, now = new Date()): Promise<BeatQueueCounts> {
+export async function countBeatItemsByStatus(
+  database: Database,
+  now = new Date(),
+): Promise<BeatQueueCounts> {
   const currentIso = now.toISOString();
   const staleCutoffIso = new Date(now.getTime() - BEAT_PENDING_STALE_MS).toISOString();
   const row = await database
@@ -218,7 +228,10 @@ export async function getBeatQueueDiagnostics(
   };
 }
 
-export async function listPublicBeatRows(database: Database, now = new Date()): Promise<BeatItem[]> {
+export async function listPublicBeatRows(
+  database: Database,
+  now = new Date(),
+): Promise<BeatItem[]> {
   const iso = now.toISOString();
   const { results } = await database
     .prepare(
@@ -282,7 +295,10 @@ export type UpsertBeatInput = {
   createdBy: string;
 };
 
-export async function upsertBeatItem(database: Database, input: UpsertBeatInput): Promise<{ id: string }> {
+export async function upsertBeatItem(
+  database: Database,
+  input: UpsertBeatInput,
+): Promise<{ id: string }> {
   const id = input.id ?? crypto.randomUUID();
   const originalUrl = normalizeBeatUrl(input.originalUrl) ?? input.originalUrl.trim();
   const classified = classifyBeatMedia(originalUrl);
@@ -381,14 +397,14 @@ export async function patchBeatItem(
   const current = await getBeatItemById(database, id);
   if (!current) throw new Error("Beat item not found.");
   const next = {
-    context: patch.context !== undefined ? patch.context : current.context ?? null,
+    context: patch.context !== undefined ? patch.context : (current.context ?? null),
     headline: patch.headline ?? current.headline,
     category: patch.category ?? current.category,
     approvalStatus: patch.approvalStatus ?? current.approvalStatus,
-    approvedBy: patch.approvedBy !== undefined ? patch.approvedBy : current.approvedBy ?? null,
-    approvedAt: patch.approvedAt !== undefined ? patch.approvedAt : current.approvedAt ?? null,
+    approvedBy: patch.approvedBy !== undefined ? patch.approvedBy : (current.approvedBy ?? null),
+    approvedAt: patch.approvedAt !== undefined ? patch.approvedAt : (current.approvedAt ?? null),
     pinned: patch.pinned !== undefined ? patch.pinned : Boolean(current.pinned),
-    expiresAt: patch.expiresAt !== undefined ? patch.expiresAt : current.expiresAt ?? null,
+    expiresAt: patch.expiresAt !== undefined ? patch.expiresAt : (current.expiresAt ?? null),
   };
   await database
     .prepare(
@@ -409,4 +425,24 @@ export async function patchBeatItem(
       id,
     )
     .run();
+}
+
+/** Bounded recent coverage for headline matching; URL fingerprints remain global. */
+export async function existingBeatStories(
+  database: Database,
+  now: Date = new Date(),
+): Promise<BeatStoryReference[]> {
+  const cutoff = new Date(now.getTime() - 48 * 3_600_000).toISOString();
+  const { results } = await database
+    .prepare(
+      `SELECT original_url, headline, team_slug, timestamp FROM beat_items WHERE timestamp >= ? ORDER BY timestamp DESC LIMIT 500`,
+    )
+    .bind(cutoff)
+    .all<{ original_url: string; headline: string; team_slug: string | null; timestamp: string }>();
+  return results.map((row) => ({
+    originalUrl: row.original_url,
+    headline: row.headline,
+    teamSlug: row.team_slug,
+    timestamp: row.timestamp,
+  }));
 }

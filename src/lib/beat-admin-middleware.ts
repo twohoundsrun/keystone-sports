@@ -123,7 +123,7 @@ export const beatAdminMiddleware = createMiddleware({ type: 'request' }).server(
 
     const cursorParam = url.searchParams.get('cursor');
     const cursor = cursorParam ? decodeBeatCursor(cursorParam) : null;
-    if (cursorParam && !cursor) return json({ ok: false, error: 'Invalid Beat queue cursor.' }, 422);
+    if (cursorParam && !cursor) return json({ ok: false, error: 'Invalid or outdated Beat queue cursor. Reload the desk to restart pagination.' }, 422);
 
     const limit = clampBeatQueueLimit(url.searchParams.get('limit'));
     const now = new Date();
@@ -248,7 +248,7 @@ export const beatAdminMiddleware = createMiddleware({ type: 'request' }).server(
 
     try {
       const { db } = await import('@/lib/publishing/runtime.server');
-      const { existingBeatFingerprints, upsertBeatItem } = await import('@/lib/beat/db.server');
+      const { existingBeatFingerprints, existingBeatStories, upsertBeatItem } = await import('@/lib/beat/db.server');
       const { discoverPaBeatCandidates } = await import('@/lib/beat/discovery');
       const database = db();
       const fingerprints = await existingBeatFingerprints(database);
@@ -266,6 +266,7 @@ export const beatAdminMiddleware = createMiddleware({ type: 'request' }).server(
 
       const discovered = await discoverPaBeatCandidates({
         existingFingerprints: fingerprints,
+        existingStories: await existingBeatStories(database),
         newsUrls,
         perAccountLimit: parsed.data.perAccountLimit ?? 2,
       });

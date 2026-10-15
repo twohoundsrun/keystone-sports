@@ -1,0 +1,225 @@
+{
+  "now": "2026-10-14T16:00:00+00:00",
+  "candidates": [
+    {
+      "id": "promo",
+      "originalUrl": "https://example.com/promo",
+      "headline": "Eagles official jersey giveaway: win tickets tonight",
+      "teamSlug": "eagles",
+      "sourceTier": "official_team_league",
+      "verifiedOfficial": true,
+      "source": "Fixture sports desk",
+      "timestamp": "2026-10-14T15:00:00+00:00",
+      "category": "from_the_beat"
+    },
+    {
+      "id": "reaction",
+      "originalUrl": "https://example.com/reaction",
+      "headline": "Phillies fans react to a fun clubhouse dance",
+      "teamSlug": "phillies",
+      "sourceTier": "official_team_league",
+      "verifiedOfficial": true,
+      "source": "Fixture sports desk",
+      "timestamp": "2026-10-14T15:00:00+00:00",
+      "category": "from_the_beat"
+    },
+    {
+      "id": "injury",
+      "originalUrl": "https://example.com/injury",
+      "headline": "Eagles quarterback Jalen Hurts ruled out after concussion",
+      "teamSlug": "eagles",
+      "sourceTier": "reporter_original",
+      "verifiedOfficial": false,
+      "source": "Fixture sports desk",
+      "timestamp": "2026-10-14T14:00:00+00:00",
+      "category": "from_the_beat"
+    },
+    {
+      "id": "state-title",
+      "originalUrl": "https://example.com/state-title",
+      "headline": "Harrisburg wins PIAA state championship in overtime",
+      "teamSlug": "harrisburg-high",
+      "sourceTier": "broadcaster_publication",
+      "verifiedOfficial": false,
+      "source": "Fixture sports desk",
+      "timestamp": "2026-10-14T13:00:00+00:00",
+      "category": "from_the_beat"
+    },
+    {
+      "id": "small-college",
+      "originalUrl": "https://example.com/small-college",
+      "headline": "Kutztown clinches PSAC championship and NCAA playoff berth",
+      "teamSlug": "kutztown",
+      "sourceTier": "official_team_league",
+      "verifiedOfficial": true,
+      "source": "Fixture sports desk",
+      "timestamp": "2026-10-14T12:00:00+00:00",
+      "category": "from_the_beat"
+    },
+    {
+      "id": "regional",
+      "originalUrl": "https://example.com/regional",
+      "headline": "Erie Otters coach fired after investigation",
+      "teamSlug": "erie-otters",
+      "sourceTier": "broadcaster_publication",
+      "verifiedOfficial": false,
+      "source": "Fixture sports desk",
+      "timestamp": "2026-10-14T14:00:00+00:00",
+      "category": "from_the_beat"
+    },
+    {
+      "id": "non-pa",
+      "originalUrl": "https://example.com/non-pa",
+      "headline": "Lakers trade veteran center to Suns",
+      "teamSlug": null,
+      "sourceTier": "reporter_original",
+      "verifiedOfficial": false,
+      "source": "Fixture sports desk",
+      "timestamp": "2026-10-14T15:00:00+00:00",
+      "category": "from_the_beat"
+    },
+    {
+      "id": "rumor",
+      "originalUrl": "https://example.com/rumor",
+      "headline": "Rumor: Eagles could be trading star receiver",
+      "teamSlug": "eagles",
+      "sourceTier": "aggregator",
+      "verifiedOfficial": false,
+      "source": "Fixture sports desk",
+      "timestamp": "2026-10-14T15:00:00+00:00",
+      "category": "from_the_beat"
+    },
+    {
+      "id": "stale",
+      "originalUrl": "https://example.com/stale",
+      "headline": "Steelers sign veteran linebacker to active roster",
+      "teamSlug": "steelers",
+      "sourceTier": "official_team_league",
+      "verifiedOfficial": true,
+      "source": "Fixture sports desk",
+      "timestamp": "2026-10-10T12:00:00+00:00",
+      "category": "from_the_beat"
+    },
+    {
+      "id": "trade",
+      "originalUrl": "https://example.com/trade",
+      "headline": "Pirates acquire starting pitcher in trade",
+      "teamSlug": "pirates",
+      "sourceTier": "reporter_original",
+      "verifiedOfficial": false,
+      "source": "Fixture sports desk",
+      "timestamp": "2026-10-14T15:00:00+00:00",
+      "category": "from_the_beat"
+    },
+    {
+      "id": "injury-copy",
+      "originalUrl": "https://example.com/injury-copy",
+      "headline": "Eagles quarterback Jalen Hurts ruled out after concussion",
+      "teamSlug": "eagles",
+      "sourceTier": "broadcaster_publication",
+      "verifiedOfficial": false,
+      "source": "Fixture sports desk",
+      "timestamp": "2026-10-14T14:00:00+00:00",
+      "category": "from_the_beat"
+    },
+    {
+      "id": "injury-followup",
+      "originalUrl": "https://example.com/injury-followup",
+      "headline": "Eagles quarterback Jalen Hurts cleared after concussion, returns to practice",
+      "teamSlug": "eagles",
+      "sourceTier": "reporter_original",
+      "verifiedOfficial": false,
+      "source": "Fixture sports desk",
+      "timestamp": "2026-10-14T15:00:00+00:00",
+      "category": "from_the_beat"
+    },
+    {
+      "id": "injury-tracking",
+      "originalUrl": "https://example.com/injury?utm_source=wire",
+      "headline": "Eagles quarterback Jalen Hurts ruled out after concussion",
+      "teamSlug": "eagles",
+      "sourceTier": "reporter_original",
+      "verifiedOfficial": false,
+      "source": "Fixture sports desk",
+      "timestamp": "2026-10-14T14:00:00+00:00",
+      "category": "from_the_beat"
+    },
+    {
+      "id": "preview",
+      "originalUrl": "https://example.com/preview",
+      "headline": "Penn State game preview: five things to watch",
+      "teamSlug": "penn-state",
+      "sourceTier": "broadcaster_publication",
+      "verifiedOfficial": false,
+      "source": "Fixture sports desk",
+      "timestamp": "2026-10-14T08:00:00+00:00",
+      "category": "from_the_beat"
+    },
+    {
+      "id": "interview",
+      "originalUrl": "https://example.com/interview",
+      "headline": "Pitt coach discusses practice in postgame interview",
+      "teamSlug": "pitt",
+      "sourceTier": "official_team_league",
+      "verifiedOfficial": true,
+      "source": "Fixture sports desk",
+      "timestamp": "2026-10-14T13:00:00+00:00",
+      "category": "from_the_beat"
+    },
+    {
+      "id": "local",
+      "originalUrl": "https://example.com/local",
+      "headline": "Scranton wins district championship to reach PIAA final",
+      "teamSlug": "scranton-high",
+      "sourceTier": "broadcaster_publication",
+      "verifiedOfficial": false,
+      "source": "Fixture sports desk",
+      "timestamp": "2026-10-14T13:00:00+00:00",
+      "category": "from_the_beat"
+    },
+    {
+      "id": "result",
+      "originalUrl": "https://example.com/result",
+      "headline": "Flyers beat Penguins 4-2 in season opener",
+      "teamSlug": "flyers",
+      "sourceTier": "reporter_original",
+      "verifiedOfficial": false,
+      "source": "Fixture sports desk",
+      "timestamp": "2026-10-14T10:00:00+00:00",
+      "category": "from_the_beat"
+    },
+    {
+      "id": "investigation",
+      "originalUrl": "https://example.com/investigation",
+      "headline": "Temple athletics faces NCAA investigation into recruiting violations",
+      "teamSlug": "temple",
+      "sourceTier": "reporter_original",
+      "verifiedOfficial": false,
+      "source": "Fixture sports desk",
+      "timestamp": "2026-10-14T11:00:00+00:00",
+      "category": "from_the_beat"
+    },
+    {
+      "id": "duplicate-event",
+      "originalUrl": "https://example.com/duplicate-event",
+      "headline": "Eagles quarterback Jalen Hurts ruled out Sunday after concussion",
+      "teamSlug": "eagles",
+      "sourceTier": "broadcaster_publication",
+      "verifiedOfficial": false,
+      "source": "Fixture sports desk",
+      "timestamp": "2026-10-14T14:00:00+00:00",
+      "category": "from_the_beat"
+    },
+    {
+      "id": "followup-number",
+      "originalUrl": "https://example.com/followup-number",
+      "headline": "Flyers beat Penguins 5-2 in season opener",
+      "teamSlug": "flyers",
+      "sourceTier": "reporter_original",
+      "verifiedOfficial": false,
+      "source": "Fixture sports desk",
+      "timestamp": "2026-10-14T12:00:00+00:00",
+      "category": "from_the_beat"
+    }
+  ]
+}

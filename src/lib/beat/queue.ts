@@ -47,10 +47,12 @@ export function isBeatQueueStatus(value: unknown): value is BeatQueueStatus {
 /**
  * Keyset cursor. `bucket` is 0 for pending and 1 for everything else so the
  * "all" view can list pending first while remaining deterministic and stable
- * across pages (ties broken by updated_at then id, both descending).
+ * across pages (pending score first, ties broken by updated_at then id, both descending).
  */
 export type BeatQueueCursor = {
   bucket: 0 | 1;
+  /** Stored pending relevance; old cursors must restart pagination. */
+  priority: number;
   updatedAt: string;
   id: string;
 };
@@ -65,7 +67,9 @@ function base64UrlDecode(text: string): string {
 }
 
 export function encodeBeatCursor(cursor: BeatQueueCursor): string {
-  return base64UrlEncode(JSON.stringify({ b: cursor.bucket, u: cursor.updatedAt, i: cursor.id }));
+  return base64UrlEncode(
+    JSON.stringify({ b: cursor.bucket, u: cursor.updatedAt, i: cursor.id, p: cursor.priority }),
+  );
 }
 
 /** Returns null for missing or malformed cursors (callers reject, never guess). */
@@ -82,7 +86,13 @@ export function decodeBeatCursor(raw: string | null | undefined): BeatQueueCurso
   if (rec.b !== 0 && rec.b !== 1) return null;
   if (typeof rec.u !== "string" || rec.u.length === 0) return null;
   if (typeof rec.i !== "string" || rec.i.length === 0) return null;
-  return { bucket: rec.b, updatedAt: rec.u, id: rec.i };
+  if (typeof rec.p !== "number" || !Number.isFinite(rec.p) || rec.p < 0 || rec.p > 100) return null;
+  return {
+    bucket: rec.b,
+    updatedAt: rec.u,
+    id: rec.i,
+    priority: rec.p,
+  };
 }
 
 /** Clamp a requested page size to a safe range, defaulting on invalid input. */
