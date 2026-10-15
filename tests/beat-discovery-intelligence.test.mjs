@@ -23,7 +23,7 @@ const fingerprints = load(
   ["beatDuplicateFingerprint", "beatStoryRelation"],
   allow,
 );
-const priority = load("src/lib/beat/priority.ts", ["discoveryPriority", "hasUnconfirmedLanguage"]);
+const priority = load("src/lib/beat/priority.ts", ["discoveryPriority", "hasUnconfirmedLanguage"], load("src/lib/beat/coverage.ts", ["inferPaCoverage"]));
 const discovery = load(
   "src/lib/beat/discovery.ts",
   ["candidatesFromEditorialJson", "discoverPaBeatCandidates", "dedupeDiscoveryStories"],

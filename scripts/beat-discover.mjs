@@ -49,15 +49,15 @@ function loadHelpers() {
     `${fpCode}\nreturn { beatDuplicateFingerprint, beatStoryRelation };`,
   )(allow.normalizeBeatUrl, allow.extractXStatusId, allow.extractYouTubeId);
 
+  const coverageCode = stripTypeScriptTypes(readFileSync(join(root, "src/lib/beat/coverage.ts"), "utf8"), { mode: "transform" }).replace(/\bexport /g, "");
+  const { inferPaCoverage } = new Function(`${coverageCode}\nreturn { inferPaCoverage };`)();
   const priorityCode = stripTypeScriptTypes(
     readFileSync(join(root, "src/lib/beat/priority.ts"), "utf8"),
     { mode: "transform" },
   )
     .replace(/^import\s+[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, "")
     .replace(/\bexport /g, "");
-  const priority = new Function(
-    `${priorityCode}\nreturn { discoveryPriority, hasUnconfirmedLanguage };`,
-  )();
+  const priority = new Function("inferPaCoverage", `${priorityCode}\nreturn { discoveryPriority, hasUnconfirmedLanguage };`)(inferPaCoverage);
 
   const discCode = stripTypeScriptTypes(readFileSync(discoveryPath, "utf8"), { mode: "transform" })
     .replace(/^import\s+type[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, "")

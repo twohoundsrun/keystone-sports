@@ -24,7 +24,7 @@ If Access is unavailable, visitors see a locked message; News RSS + Film Room ar
 | **Set expiration** | Set or clear `expiresAt` |
 | **Open original** | Deep-link `originalUrl` |
 | **Preview** | Side panel metadata + embed URL |
-| **Run discovery** | Inserts **pending** candidates only (never auto-publishes) |
+| **Run feed discovery** | Retained RSS/Atom → Phase 4C score/dedupe → at most ten **pending** candidates. One run per ten minutes, including dry-runs; owner-only report. Never auto-publishes |
 
 ## Bot ingest (M3)
 
@@ -48,3 +48,10 @@ CLI: `npm run beat:discover -- --input candidates.json` (preferred). Native Grok
 ## Feature flag
 
 `KEYSTONE_BEAT_M1` gates the public Beat strip on `/news`.
+
+
+## Feed discovery (Phase 4D)
+
+Apply migration `0005_beat_discovery_state` before running the new default acquisition path. `POST /editor/beat?beatAction=discover` defaults to RSS; `mode: "legacy_x"` explicitly retains the old free X fallback. The TanStack server action uses the same feed service. No schedule was added or changed. Dry-runs update observation metadata/cooldown but never insert cards; a subsequent run within ten minutes returns the last report without fetching or inserting. Source-level Retry-After can extend that cooldown for a particular feed.
+
+The collapsed feed report is owner-only. Counts describe observed feed activity, failure, stale/invalid timestamps, filtering, duplicates and request-budget deferrals. “No dedicated source” is a registry gap, not evidence that an important event was missed. Update timestamps link to originals for review and never reset original publication age. New/unverified sources must pass live access/content/terms checks before activation; see `docs/phase-4d-discovery.md`.

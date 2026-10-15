@@ -10,6 +10,7 @@ import { BEAT_QUEUE_DEFAULT_LIMIT, type BeatQueueCounts, type BeatQueueStatus } 
 import { unavailableBeatDiagnostics, type BeatQueueDiagnostics } from "./diagnostics";
 
 export type BeatDeskPayload = {
+  adminDiscoveryReport?: import("./feed-discovery").FeedDiscoveryReport | null;
   enabled: boolean;
   generatedAt: string;
   items: PublicBeatItem[];
@@ -92,9 +93,11 @@ export const getBeatAdminDesk = createServerFn({ method: "GET" }).handler(async 
     const now = new Date();
     const status: BeatQueueStatus = "pending";
     const counts = await countBeatItemsByStatus(database, now);
-    const [page, diagnostics] = await Promise.all([
+    const { getFeedDiscoveryReport } = await import("./feed-service.server");
+    const [page, diagnostics, discoveryReport] = await Promise.all([
       listBeatItemsPage(database, { status, limit: BEAT_QUEUE_DEFAULT_LIMIT }),
       getBeatQueueDiagnostics(database, counts, now),
+      getFeedDiscoveryReport(database),
     ]);
     return {
       enabled,
@@ -107,6 +110,7 @@ export const getBeatAdminDesk = createServerFn({ method: "GET" }).handler(async 
       adminLimit: page.limit,
       adminCounts: counts,
       adminDiagnostics: diagnostics,
+      adminDiscoveryReport: discoveryReport,
     };
   } catch {
     return {
@@ -204,11 +208,15 @@ export const createBeatItem = createServerFn({ method: "POST" })
 
 /** Manual discovery — inserts pending candidates only (never auto-publishes). */
 export const discoverBeatCandidates = createServerFn({ method: "POST" })
-  .validator((input) => z.object({ dryRun: z.boolean().optional(), perAccountLimit: z.number().int().min(1).max(5).optional() }).parse(input ?? {}))
+  .validator((input) => z.object({ mode: z.enum(["rss", "legacy_x"]).optional(), dryRun: z.boolean().optional(), perAccountLimit: z.number().int().min(1).max(5).optional() }).parse(input ?? {}))
   .handler(async ({ data }) => {
     const { db, requireAdmin } = await import("../publishing/runtime.server");
     const adminId = requireAdmin();
     const database = db();
+    if (data.mode !== "legacy_x") {
+      const { runFeedDiscovery } = await import("./feed-service.server");
+      return runFeedDiscovery(database, { dryRun: data.dryRun, createdBy: `discover:rss:${adminId}` });
+    }
     const { existingBeatFingerprints, existingBeatStories, upsertBeatItem } = await import("./db.server");
     const { discoverPaBeatCandidates } = await import("./discovery");
     const fingerprints = await existingBeatFingerprints(database);

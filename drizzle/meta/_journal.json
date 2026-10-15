@@ -36,6 +36,13 @@
       "when": 1789090400000,
       "tag": "0004_beat_fingerprint_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1792075427912,
+      "tag": "0005_beat_discovery_state",
+      "breakpoints": true
     }
   ]
 }

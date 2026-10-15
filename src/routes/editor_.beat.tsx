@@ -29,6 +29,8 @@ type SiteAccess = {
 };
 
 type DiscoveryResponse = {
+  cached?: boolean;
+  report?: import("@/lib/beat/feed-discovery").FeedDiscoveryReport | null;
   ok?: boolean;
   candidates: unknown[];
   skippedDuplicates: number;
@@ -186,6 +188,7 @@ export const Route = createFileRoute("/editor_/beat")({
 
 function BeatEditorPage() {
   const { access, desk, queueError: initialQueueError, queueDiagnostics } = Route.useLoaderData();
+  const [discoveryReport, setDiscoveryReport] = useState(desk?.adminDiscoveryReport ?? null);
   const [message, setMessage] = useState("");
   const [messageTone, setMessageTone] = useState<"ok" | "error">("ok");
   const [busy, setBusy] = useState(false);
@@ -232,6 +235,7 @@ function BeatEditorPage() {
           }
           setItems(state.data.adminItems ?? []);
           setCounts(state.data.adminCounts ?? EMPTY_BEAT_QUEUE_COUNTS);
+          setDiscoveryReport(state.data.adminDiscoveryReport ?? null);
           setNextCursor(state.data.adminNextCursor ?? null);
           setDiagnostics(state.data.adminDiagnostics ?? null);
         },
@@ -378,12 +382,17 @@ function BeatEditorPage() {
           disabled={busy}
           onClick={() =>
             void run(
-              () => discoverBeatCandidatesViaAccess({ dryRun: false, perAccountLimit: 2 }),
-              "Discovery finished — new rows are pending only.",
+              async () => {
+                const result = await discoverBeatCandidatesViaAccess({ dryRun: false, perAccountLimit: 2 });
+                setDiscoveryReport(result.report ?? null);
+                setMessageTone("ok");
+                setMessage(result.cached ? "Discovery is running or cooling down; no additional feeds requested." : `Feed discovery: ${result.inserted ?? 0} new pending stories. ${result.report?.issues.length ?? 0} source or filtering notices; review the report.`);
+              },
+              "",
             )
           }
         >
-          Run discovery (pending)
+          Run feed discovery (pending)
         </Button>
         <Button
           type="button"
@@ -392,14 +401,31 @@ function BeatEditorPage() {
           onClick={() =>
             void run(async () => {
               const result = await discoverBeatCandidatesViaAccess({ dryRun: true, perAccountLimit: 2 });
+              setDiscoveryReport(result.report ?? null);
               setMessageTone("ok");
-              setMessage(`Dry-run: ${result.candidates.length} candidates, ${result.skippedDuplicates} dupes.`);
+              setMessage(result.cached ? "Discovery cooldown: no new requests. See the last report below." : `Dry-run: ${result.candidates.length} candidates, ${result.skippedDuplicates} dupes. No stories inserted.`);
             }, "")
           }
         >
           Discovery dry-run
         </Button>
       </div>
+
+      {discoveryReport ? (
+        <details className="mt-4 rounded-md bg-surface p-4 text-sm">
+          <summary className="cursor-pointer font-semibold focus-visible:outline-2 focus-visible:outline-offset-2">Feed discovery report · {discoveryReport.candidates} candidates · {discoveryReport.issues.length} notices</summary>
+          <p className="mt-2 text-muted">Checked {discoveryReport.checkedAt}. Observations from this manual run; missing candidates do not prove a missed event. Feed requests are limited to once every ten minutes across the desk, including dry-runs.</p>
+          <ul className="mt-2 space-y-1">{discoveryReport.sources.map((source) => <li key={source.id}>{source.label}: {source.state}; {source.observed} observed, {source.eligible} eligible{source.error ? ` (${source.error})` : ""}</li>)}</ul>
+          <ul className="mt-2 space-y-1">{discoveryReport.coverage.map((coverage) => <li key={coverage.area}>{coverage.area.replaceAll("_", " ")}: {coverage.eligible} eligible, {coverage.candidates} candidates ({coverage.state.replaceAll("_", " ")})</li>)}</ul>
+          {discoveryReport.issues.length ? <ul className="mt-2 text-warn">{discoveryReport.issues.map((issue, index) => <li key={index}>{issue}</li>)}</ul> : null}
+          {discoveryReport.updates.length ? (
+            <div className="mt-2 text-muted">
+              <p>Source updates retain their original publication age. Inspect the original before treating them as new developments.</p>
+              <ul>{discoveryReport.updates.map((update) => <li key={update.url}><a className="underline focus-visible:outline-2" href={update.url} target="_blank" rel="noopener noreferrer">Updated {update.updatedAt}: review original (opens in a new tab)</a></li>)}</ul>
+            </div>
+          ) : null}
+        </details>
+      ) : null}
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[1.2fr_1fr]">
         <section>
