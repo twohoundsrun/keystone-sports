@@ -31,7 +31,7 @@ const queue = load('src/lib/beat/queue.ts', [
 ]);
 const row = load('src/lib/beat/row.ts', ['rowToBeatItem', 'BEAT_ITEM_COLUMNS']);
 const diagnostics = load('src/lib/beat/diagnostics.ts', ['deriveBeatOperationalState', 'classifyLastExpireRun', 'deriveBeatReviewBacklog']);
-const priority = load('src/lib/beat/priority.ts', ['discoveryPriority']);
+const priority = load('src/lib/beat/priority.ts', ['discoveryPriority'], load('src/lib/beat/coverage.ts', ['inferPaCoverage']));
 const db = load('src/lib/beat/db.server.ts', ['listBeatItemsPage', 'countBeatItemsByStatus'], {
   discoveryPriority: priority.discoveryPriority,
   beatStoryRelation: () => null,

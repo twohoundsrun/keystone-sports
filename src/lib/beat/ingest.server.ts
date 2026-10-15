@@ -4,16 +4,13 @@
  */
 
 import type { Database } from "../publishing/runtime.server";
-import type { BeatCategory } from "./types";
+import type { BeatCategory, BeatDiscoveryCandidate } from "./types";
 import { classifyBeatMedia, normalizeBeatUrl } from "./allowlist";
 import { beatDuplicateFingerprint } from "./fingerprint";
 import { upsertBeatItem, existingBeatFingerprints, existingBeatStories } from "./db.server";
 import { isBeatUniquenessConflict } from "./ingest-errors";
 import { BEAT_ITEM_COLUMNS, rowToBeatItem, type BeatItemRow } from "./row";
-import {
-  candidatesFromEditorialJson,
-  type EditorialCandidateInput,
-} from "./discovery";
+import { candidatesFromEditorialJson, type EditorialCandidateInput } from "./discovery";
 
 export type IngestCandidateInput = EditorialCandidateInput;
 
@@ -28,7 +25,12 @@ export type IngestCheckResult = {
 
 export async function findBeatDuplicate(
   database: Database,
-  input: { originalUrl: string; teamSlug?: string | null; headline?: string; duplicateFingerprint?: string },
+  input: {
+    originalUrl: string;
+    teamSlug?: string | null;
+    headline?: string;
+    duplicateFingerprint?: string;
+  },
 ): Promise<IngestCheckResult> {
   const originalUrl = normalizeBeatUrl(input.originalUrl) ?? input.originalUrl.trim();
   const fingerprint =
@@ -56,9 +58,7 @@ export async function findBeatDuplicate(
   }
 
   const byFp = await database
-    .prepare(
-      `SELECT ${BEAT_ITEM_COLUMNS} FROM beat_items WHERE duplicate_fingerprint = ? LIMIT 1`,
-    )
+    .prepare(`SELECT ${BEAT_ITEM_COLUMNS} FROM beat_items WHERE duplicate_fingerprint = ? LIMIT 1`)
     .bind(fingerprint)
     .first<BeatItemRow>();
   if (byFp) {
@@ -93,13 +93,30 @@ export async function ingestPendingCandidates(
     existingStories: await existingBeatStories(database),
     newsUrls: opts?.newsUrls,
   });
+  return insertNormalizedPendingCandidates(database, normalized, opts?.createdBy ?? "ingest:bot");
+}
+
+/** Shared PENDING-only writer; discovery and ingest use the same race-safe path. */
+export async function insertNormalizedPendingCandidates(
+  database: Database,
+  normalized: {
+    candidates: BeatDiscoveryCandidate[];
+    skippedDuplicates: number;
+    discarded: number;
+    errors: string[];
+  },
+  createdBy: string,
+) {
   const candidates = normalized.candidates;
   let skippedDuplicates = normalized.skippedDuplicates;
   const errors = [...normalized.errors];
   const discarded = normalized.discarded;
-
-  const createdBy = opts?.createdBy ?? "ingest:bot";
-  const items: { id: string; originalUrl: string; relevanceScore: number; category: BeatCategory }[] = [];
+  const items: {
+    id: string;
+    originalUrl: string;
+    relevanceScore: number;
+    category: BeatCategory;
+  }[] = [];
   let inserted = 0;
 
   for (const c of candidates) {

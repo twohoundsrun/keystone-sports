@@ -1,0 +1,214 @@
+{
+  "now": "2026-10-15T12:00:00.000Z",
+  "sources": [
+    {
+      "source": {
+        "id": "pro",
+        "label": "Fixture pro",
+        "url": "https://fixture.test/pro.xml",
+        "teamSlug": "eagles",
+        "area": "professional",
+        "sourceTier": "official_team_league",
+        "verification": "retained",
+        "enabled": true
+      },
+      "articles": [
+        {
+          "url": "https://articles.test/injury",
+          "title": "Eagles quarterback ruled out with concussion",
+          "published": "2026-10-15T11:00:00.000Z"
+        },
+        {
+          "url": "https://articles.test/clearance",
+          "title": "Eagles quarterback cleared to return after concussion",
+          "published": "2026-10-15T11:00:00.000Z"
+        },
+        {
+          "url": "https://articles.test/roster",
+          "title": "Eagles sign veteran linebacker to active roster",
+          "published": "2026-10-15T11:00:00.000Z"
+        },
+        {
+          "url": "https://articles.test/routine",
+          "title": "Eagles practice photo gallery",
+          "published": "2026-10-15T11:00:00.000Z"
+        },
+        {
+          "url": "https://articles.test/promo",
+          "title": "Win Eagles tickets in sponsored giveaway",
+          "published": "2026-10-15T11:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "source": {
+        "id": "college",
+        "label": "Fixture college",
+        "url": "https://fixture.test/college.xml",
+        "area": "college",
+        "sourceTier": "official_team_league",
+        "verification": "retained",
+        "enabled": true
+      },
+      "articles": [
+        {
+          "url": "https://articles.test/psu",
+          "title": "Penn State starter needs surgery after injury",
+          "published": "2026-10-15T11:00:00.000Z"
+        },
+        {
+          "url": "https://articles.test/pitt",
+          "title": "Pitt Panthers coach resigns after investigation",
+          "published": "2026-10-15T11:00:00.000Z"
+        },
+        {
+          "url": "https://articles.test/bucknell",
+          "title": "Bucknell qualifies for national tournament",
+          "published": "2026-10-15T11:00:00.000Z"
+        },
+        {
+          "url": "https://articles.test/stjoe",
+          "title": "Saint Joseph’s wins conference championship",
+          "published": "2026-10-15T11:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "source": {
+        "id": "school",
+        "label": "Fixture school",
+        "url": "https://fixture.test/school.xml",
+        "area": "high_school",
+        "sourceTier": "official_team_league",
+        "verification": "retained",
+        "enabled": true
+      },
+      "articles": [
+        {
+          "url": "https://articles.test/piaa",
+          "title": "Harrisburg wins PIAA championship in overtime",
+          "published": "2026-10-15T11:00:00.000Z"
+        },
+        {
+          "url": "https://articles.test/district",
+          "title": "Scranton wins district championship and advances to final",
+          "published": "2026-10-15T11:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "source": {
+        "id": "regional",
+        "label": "Fixture regional",
+        "url": "https://fixture.test/regional.xml",
+        "area": "regional",
+        "sourceTier": "official_team_league",
+        "verification": "retained",
+        "enabled": true
+      },
+      "articles": [
+        {
+          "url": "https://articles.test/pigs",
+          "title": "Lehigh Valley IronPigs clinch championship",
+          "published": "2026-10-15T11:00:00.000Z"
+        },
+        {
+          "url": "https://articles.test/rail",
+          "title": "RailRiders win playoff championship",
+          "published": "2026-10-15T11:00:00.000Z"
+        },
+        {
+          "url": "https://articles.test/erie",
+          "title": "Erie SeaWolves win league championship",
+          "published": "2026-10-15T11:00:00.000Z"
+        },
+        {
+          "url": "https://articles.test/senators",
+          "title": "Harrisburg Senators coach steps down",
+          "published": "2026-10-15T11:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "source": {
+        "id": "wire",
+        "label": "Fixture wire",
+        "url": "https://fixture.test/wire.xml",
+        "sourceTier": "official_team_league",
+        "verification": "retained",
+        "enabled": true
+      },
+      "articles": [
+        {
+          "url": "https://articles.test/repeat",
+          "title": "Eagles quarterback ruled out with concussion",
+          "published": "2026-10-15T11:00:00.000Z"
+        },
+        {
+          "url": "https://articles.test/outside",
+          "title": "Lakers sign veteran forward",
+          "published": "2026-10-15T11:00:00.000Z"
+        },
+        {
+          "url": "https://articles.test/old",
+          "title": "Steelers sign veteran linebacker",
+          "published": "2026-10-11T12:00:00.000Z",
+          "updated": "2026-10-15T11:00:00.000Z"
+        },
+        {
+          "url": "https://articles.test/missing",
+          "title": "Temple coach resigns"
+        },
+        {
+          "url": "https://articles.test/bad",
+          "title": "Lafayette qualifies for NCAA tournament",
+          "published": "nonsense"
+        },
+        {
+          "url": "https://articles.test/future",
+          "title": "Villanova wins championship",
+          "published": "2026-10-16T12:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "source": {
+        "id": "stale",
+        "label": "Fixture stale",
+        "url": "https://fixture.test/stale.xml",
+        "sourceTier": "official_team_league",
+        "verification": "retained",
+        "enabled": true
+      },
+      "articles": [
+        {
+          "url": "https://articles.test/ancient",
+          "title": "Pirates acquire starting pitcher",
+          "published": "2026-10-10T12:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "source": {
+        "id": "broken",
+        "label": "Fixture broken",
+        "url": "https://fixture.test/broken.xml",
+        "sourceTier": "official_team_league",
+        "verification": "retained",
+        "enabled": true
+      },
+      "xml": "<rss><channel><item>not closed"
+    },
+    {
+      "source": {
+        "id": "outage",
+        "label": "Fixture outage",
+        "url": "https://fixture.test/outage.xml",
+        "sourceTier": "official_team_league",
+        "verification": "retained",
+        "enabled": true
+      },
+      "status": 503
+    }
+  ]
+}

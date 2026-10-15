@@ -57,3 +57,10 @@ export const beatItems = sqliteTable('beat_items', {
   index('beat_items_team').on(table.teamSlug, table.approvalStatus),
   index('beat_items_fingerprint').on(table.duplicateFingerprint),
 ]);
+
+/** One bounded owner-only discovery report and cross-isolate request cooldown. */
+export const beatDiscoveryState = sqliteTable('beat_discovery_state', {
+  id: text('id').primaryKey(),
+  startedAt: text('started_at').notNull(),
+  report: text('report'),
+});

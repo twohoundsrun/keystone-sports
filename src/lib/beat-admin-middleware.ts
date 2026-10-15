@@ -36,6 +36,7 @@ const createSchema = z.object({
 });
 
 const discoverSchema = z.object({
+  mode: z.enum(['rss', 'legacy_x']).optional(),
   dryRun: z.boolean().optional(),
   perAccountLimit: z.number().int().min(1).max(5).optional(),
 });
@@ -134,9 +135,11 @@ export const beatAdminMiddleware = createMiddleware({ type: 'request' }).server(
       const { readBeatM1Flag } = await import('@/lib/beat/flag');
       const database = db();
       const counts = await countBeatItemsByStatus(database, now);
-      const [page, diagnostics] = await Promise.all([
+      const { getFeedDiscoveryReport } = await import('@/lib/beat/feed-service.server');
+      const [page, diagnostics, discoveryReport] = await Promise.all([
         listBeatItemsPage(database, { status, cursor, limit }),
         getBeatQueueDiagnostics(database, counts, now),
+        getFeedDiscoveryReport(database),
       ]);
       return json({
         ok: true,
@@ -157,6 +160,7 @@ export const beatAdminMiddleware = createMiddleware({ type: 'request' }).server(
           adminLimit: page.limit,
           adminCounts: counts,
           adminDiagnostics: diagnostics,
+          adminDiscoveryReport: discoveryReport,
         },
       });
     } catch {
@@ -248,6 +252,10 @@ export const beatAdminMiddleware = createMiddleware({ type: 'request' }).server(
 
     try {
       const { db } = await import('@/lib/publishing/runtime.server');
+      if (parsed.data.mode !== 'legacy_x') {
+        const { runFeedDiscovery } = await import('@/lib/beat/feed-service.server');
+        return json({ ok: true, ...await runFeedDiscovery(db(), { dryRun: parsed.data.dryRun, createdBy: `discover:rss:${owner.id}` }) });
+      }
       const { existingBeatFingerprints, existingBeatStories, upsertBeatItem } = await import('@/lib/beat/db.server');
       const { discoverPaBeatCandidates } = await import('@/lib/beat/discovery');
       const database = db();

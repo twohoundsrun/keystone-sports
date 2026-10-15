@@ -1,5 +1,6 @@
 /** Deterministic desk guidance only. Never changes approval or publication. */
 import type { SourceTier } from "./types";
+import { inferPaCoverage } from "./coverage";
 
 export type DiscoveryPriorityInput = {
   text: string;
@@ -36,14 +37,19 @@ const PA_TEAMS = new Set([
 const PA_HINT =
   /\b(pennsylvania|philly|philadelphia|pittsburgh|penn state|pitt|temple|villanova|drexel|duquesne|lehigh|lafayette|bucknell|kutztown|slippery rock|harrisburg|scranton|erie|altoona|lancaster|allentown|reading (?:royals|fightin phils)|williamsport|piaa|wpial|psac|eagles|steelers|phillies|pirates|sixers|flyers|penguins|philadelphia union)\b/i;
 const DEVELOPMENT =
-  /\b(ruled out|injur(?:y|ed)|concussion|surgery|suspend(?:s|ed)?|sign(?:s|ed)?|trade[ds]?|acquir(?:e|es|ed)|waive[ds]?|fire[ds]?|hire[ds]?|investigation|violations|clear(?:s|ed)?|returns? to practice|activate[ds]?)\b/i;
+  /\b(ruled out|injur(?:y|ed)|concussion|surgery|suspend(?:s|ed)?|sign(?:s|ed)?|trade[ds]?|acquir(?:e|es|ed)|waive[ds]?|fire[ds]?|hire[ds]?|steps down|resigns?|departure|investigation|violations|clear(?:s|ed)?|returns? to practice|activate[ds]?)\b/i;
 const MILESTONE =
-  /\b(championship|champions|state title|playoff berth|clinches?|qualif(?:y|ies|ied)|record[- ]breaking)\b/i;
+  /\b(championship|champions|state title|playoff berth|clinches?|qualif(?:y|ies|ied)|record[- ]breaking|national tournament|NCAA (?:bid|berth)|advances? to)\b/i;
 const RESULT = /\b(wins?|beats?|defeats?|overtime|final score)\b/i;
 const PREVIEW = /\b(preview|power rankings?|mock draft|predictions?|things to watch)\b/i;
 const PROMO =
   /\b(giveaway|sweepstakes|promo code|merchandise|win tickets?|jersey giveaway|parlay|betting|sponsored)\b/i;
 const RUMOR = /\b(rumou?r|sources say|hearing|reportedly|per sources|could be)\b/i;
+
+/** Intake significance gate shares the existing relevance model's signals. */
+export function hasEditorialDevelopment(text: string): boolean {
+  return DEVELOPMENT.test(text) || MILESTONE.test(text) || RESULT.test(text);
+}
 
 export function hasUnconfirmedLanguage(text: string): boolean {
   return RUMOR.test(text);
@@ -54,7 +60,10 @@ export function discoveryPriority(
   now: Date = new Date(),
 ): { score: number; reasons: string[] } {
   const reasons: string[] = [];
-  const local = PA_TEAMS.has(input.teamSlug?.toLowerCase() ?? "") || PA_HINT.test(input.text);
+  const local =
+    PA_TEAMS.has(input.teamSlug?.toLowerCase() ?? "") ||
+    PA_HINT.test(input.text) ||
+    Boolean(inferPaCoverage(input.text, input.teamSlug ?? undefined));
   let score = 15;
   if (local) {
     score += 25;
