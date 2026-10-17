@@ -39,11 +39,14 @@ export const Route = createFileRoute("/")({
   }),
   loaderDeps: ({ search }) => ({ date: search.date }),
   loader: async ({ deps }) => {
+    // News and approved editorial cards do not depend on the scoreboard.
+    const newsRead = getNewsFeed().catch(() => ({ articles: [] as NewsItem[] }));
+    const beatRead = getBeatDesk().catch(() => null);
     const board = await getTodayBoard({ data: { date: deps.date } });
     const [posts, news, beat] = await Promise.all([
       getPublishedPosts({ data: { date: board.date } }).catch(() => [] as Post[]),
-      getNewsFeed().catch(() => ({ articles: [] as NewsItem[] })),
-      getBeatDesk().catch(() => null),
+      newsRead,
+      beatRead,
     ]);
     return { board, posts, news, beat };
   },

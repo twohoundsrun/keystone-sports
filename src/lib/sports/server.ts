@@ -38,42 +38,67 @@ function retryableStatus(status: number): boolean {
   return status === 408 || status === 425 || status === 429 || status >= 500;
 }
 
-async function fetchWithRetry(
+/** One elapsed budget covers transport, body and retry waits, even if abort is ignored. */
+async function fetchWithRetry<T>(
   url: string,
   headers: Record<string, string>,
   timeoutMs: number,
+  read: (response: Response) => Promise<T>,
   attempts = 3,
-): Promise<Response> {
-  let lastError: unknown;
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), timeoutMs);
-    try {
-      const res = await fetch(url, { signal: ctrl.signal, headers });
-      if (res.ok) return res;
-      const error = new Error(`${res.status} ${url}`);
-      if (!retryableStatus(res.status) || attempt === attempts - 1) throw error;
-      lastError = error;
-    } catch (error) {
-      lastError = error;
-      const message = error instanceof Error ? error.message : "";
-      const nonRetryableHttp = /^4\d\d\s/.test(message) && !/^4(08|25|29)\s/.test(message);
-      if (nonRetryableHttp || attempt === attempts - 1) throw error;
-    } finally {
-      clearTimeout(t);
+): Promise<{ body: T; status: number }> {
+  const ctrl = new AbortController();
+  const timeoutError = new Error(`Feed request timed out: ${url}`);
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => { ctrl.abort(); reject(timeoutError); }, timeoutMs);
+  });
+  const work = async () => {
+    let lastError: unknown;
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      if (ctrl.signal.aborted) throw timeoutError;
+      let readingBody = false;
+      try {
+        const res = await fetch(url, { signal: ctrl.signal, headers });
+        if (ctrl.signal.aborted) { await res.body?.cancel(); throw timeoutError; }
+        if (res.ok) {
+          readingBody = true;
+          return { body: await read(res), status: res.status };
+        }
+        await res.body?.cancel();
+        throw new Error(`${res.status} ${url}`);
+      } catch (error) {
+        if (ctrl.signal.aborted) throw timeoutError;
+        lastError = error;
+        const message = error instanceof Error ? error.message : "";
+        const nonRetryableHttp = /^\d{3}\s/.test(message) && !retryableStatus(Number(message.slice(0, 3)));
+        // A failed body/parse was never retried by the previous callers. Keep
+        // that behavior; do not turn malformed payloads into extra requests.
+        if (readingBody || nonRetryableHttp || attempt === attempts - 1) throw error;
+      }
+      await new Promise<void>((resolve, reject) => {
+        const onAbort = () => { clearTimeout(wait); reject(timeoutError); };
+        const wait = setTimeout(() => {
+          ctrl.signal.removeEventListener("abort", onAbort);
+          resolve();
+        }, 200 * 2 ** attempt);
+        ctrl.signal.addEventListener("abort", onAbort, { once: true });
+        if (ctrl.signal.aborted) onAbort();
+      });
     }
-    await new Promise((resolve) => setTimeout(resolve, 200 * 2 ** attempt));
-  }
-  throw lastError instanceof Error ? lastError : new Error(`Fetch failed: ${url}`);
+    throw lastError instanceof Error ? lastError : new Error(`Fetch failed: ${url}`);
+  };
+  try { return await Promise.race([work(), timeout]); }
+  finally { clearTimeout(timer!); ctrl.abort(); }
 }
 
 async function getJson(url: string, timeoutMs = 10000): Promise<unknown> {
-  const res = await fetchWithRetry(
+  const { body } = await fetchWithRetry(
     url,
     { "User-Agent": UA, Accept: "application/json" },
     timeoutMs,
+    (res) => res.json(),
   );
-  return await res.json();
+  return body;
 }
 
 function workersCache(): Cache | null {
@@ -110,19 +135,19 @@ async function getScoreboardJson(url: string, dates?: string, timeoutMs = 10000)
     }
   }
 
-  const res = await fetchWithRetry(
+  const { body: text, status } = await fetchWithRetry(
     url,
     { "User-Agent": UA, Accept: "application/json" },
     timeoutMs,
+    (res) => res.text(),
   );
-  const text = await res.text();
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
   } catch {
     throw new Error(`invalid JSON ${url}`);
   }
-  if (cache && res.status === 200) {
+  if (cache && status === 200) {
     try {
       await cache.put(
         cacheKey,
@@ -142,12 +167,13 @@ async function getScoreboardJson(url: string, dates?: string, timeoutMs = 10000)
 }
 
 async function getText(url: string, timeoutMs = 8000): Promise<string> {
-  const res = await fetchWithRetry(
+  const { body } = await fetchWithRetry(
     url,
     { "User-Agent": UA, Accept: "application/rss+xml, application/atom+xml, text/xml, */*" },
     timeoutMs,
+    (res) => res.text(),
   );
-  return await res.text();
+  return body;
 }
 
 function rec(v: unknown): Record<string, unknown> | null {
