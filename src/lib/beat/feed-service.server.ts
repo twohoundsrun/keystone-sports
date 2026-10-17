@@ -1,3 +1,4 @@
+import { addDiscoveryHealth } from "./feed-health";
 import type { Database } from "../publishing/runtime.server";
 import { existingBeatFingerprints, existingBeatStories } from "./db.server";
 import { insertNormalizedPendingCandidates, loadNewsUrlsForDedupe } from "./ingest.server";
@@ -80,6 +81,9 @@ export async function runFeedDiscovery(
         opts.createdBy ?? "discover:rss",
       );
   discovered.report.skippedDuplicates = written.skippedDuplicates;
+  discovered.report.inserted = written.inserted;
+  discovered.report.dryRun = Boolean(opts.dryRun);
+  addDiscoveryHealth(discovered.report, previousReport);
   if (written.errors.length)
     discovered.report.issues.push(
       `${written.errors.length} candidate storage errors; inspect and retry after cooldown`,

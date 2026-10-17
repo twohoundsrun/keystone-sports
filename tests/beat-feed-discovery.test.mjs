@@ -488,3 +488,207 @@ test("Inquirer editorial discovery waits for permission and reports why without 
   assert.equal(result.report.sources[0].state, "disabled");
   assert.match(result.report.sources[0].error, /permission/i);
 });
+
+test("Phase4E quality fixture admits meaningful PA developments and suppresses preview/promotion noise", async () => {
+  const fixture = JSON.parse(readFileSync("tests/fixtures/phase4e-quality.json", "utf8"));
+  const evalNow = new Date(fixture.now);
+  const toArticle = (c) => ({
+    ...article(c.id, c.title),
+    published: new Date(evalNow.getTime() - 3600000).toISOString(),
+  });
+  const rows = [
+    {
+      source: { ...source("quality"), sourceTier: "broadcaster_publication" },
+      articles: fixture.cases.map(toArticle),
+    },
+  ];
+  const result = await discoverFeedCandidates(
+    options({ now: evalNow, sources: rows.map((r) => r.source), fetchImpl: fetchScenario(rows) }),
+  );
+  // Evaluate each headline separately so budgets cannot disguise a classification error.
+  for (const c of fixture.cases) {
+    const one = [{ ...rows[0], articles: [toArticle(c)] }];
+    const r = await discoverFeedCandidates(
+      options({ now: evalNow, sources: one.map((r) => r.source), fetchImpl: fetchScenario(one) }),
+    );
+    assert.equal(r.candidates.length, c.admit ? 1 : 0, c.id);
+  }
+  assert.ok(result.candidates.length <= 10);
+});
+
+test("non-PA shared nicknames do not receive PA ranking credit", async () => {
+  const { discoveryPriority } = await import("../src/lib/beat/priority.ts");
+  for (const text of [
+    "Boston College Eagles win national tournament",
+    "Seton Hall Pirates hire head coach",
+  ]) {
+    const p = discoveryPriority(
+      { text, sourceTier: "broadcaster_publication", verifiedOfficial: false, timestamp: at(1) },
+      now,
+    );
+    assert.ok(p.reasons.includes("Pennsylvania connection needs confirmation"), text);
+  }
+});
+
+test("nonempty feeds containing unusable article links are reported as metadata errors", async () => {
+  const r = await discoverFeedCandidates(
+    options({
+      sources: [source("bad-links")],
+      fetchImpl: async () =>
+        new Response(
+          "<rss><channel><item><title>Eagles sign veteran</title><link>javascript:bad</link></item></channel></rss>",
+        ),
+    }),
+  );
+  assert.equal(r.report.sources[0].state, "error");
+  assert.equal(r.report.sources[0].entries, 1);
+  assert.equal(r.report.sources[0].ignored, 1);
+});
+
+test("persisted source failures accumulate only on eligible attempts and recover after success", async () => {
+  const db = database();
+  try {
+    const sources = [source("flaky", "eagles")];
+    let calls = 0;
+    const fetchImpl = async () => {
+      calls++;
+      return new Response("outage", { status: 503, headers: { "Retry-After": "1200" } });
+    };
+    const run = (minutes) =>
+      runFeedDiscovery(
+        db,
+        options({ sources, fetchImpl, now: new Date(now.getTime() + minutes * 60000) }),
+      );
+    assert.equal((await run(0)).report.sources[0].consecutiveFailures, 1);
+    assert.equal((await run(1)).cached, true);
+    assert.equal(calls, 1);
+    const backed = await run(11);
+    assert.equal(backed.report.sources[0].state, "backoff");
+    assert.equal(backed.report.sources[0].consecutiveFailures, 1);
+    assert.equal(calls, 1);
+    await run(22);
+    const third = await run(44);
+    assert.equal(third.report.sources[0].consecutiveFailures, 3);
+    assert.ok(third.report.issues.some((s) => s.includes("3 consecutive failed")));
+    const recovered = await runFeedDiscovery(
+      db,
+      options({
+        sources,
+        now: new Date(now.getTime() + 66 * 60000),
+        fetchImpl: async () =>
+          new Response(rss([article("recovered", "Eagles sign veteran quarterback")])),
+      }),
+    );
+    assert.equal(recovered.report.sources[0].consecutiveFailures, 0);
+    assert.ok(recovered.report.sources[0].lastSuccessAt);
+    assert.equal(recovered.inserted, 1);
+  } finally {
+    db.sqlite.close();
+  }
+});
+
+test("volume comparisons require comparable successful source activity and support old reports", async () => {
+  const { addDiscoveryHealth } = await import("../src/lib/beat/feed-health.ts");
+  const report = (eligible, state = "ok") => ({
+    checkedAt: now.toISOString(),
+    sources: [
+      {
+        id: "s",
+        label: "S",
+        state,
+        eligible,
+        observed: eligible,
+        newestPublished: null,
+        rejected: {},
+      },
+    ],
+    candidates: 0,
+    deferred: 0,
+    skippedDuplicates: 0,
+    coverage: [],
+    issues: [],
+    updates: [],
+  });
+  const high = report(30);
+  addDiscoveryHealth(high, report(5));
+  assert.equal(high.volume, "increased");
+  const low = report(0);
+  addDiscoveryHealth(low, report(30));
+  assert.equal(low.volume, "decreased");
+  const failed = report(0, "error");
+  addDiscoveryHealth(failed, report(30));
+  assert.equal(failed.volume, "not_comparable");
+  assert.ok(!failed.issues.some((s) => s.includes("volume")));
+  const first = report(5);
+  addDiscoveryHealth(first, null);
+  assert.equal(first.volume, "first_run");
+  const empty = report(0, "empty");
+  const prior = report(0, "empty");
+  prior.sources[0].consecutiveEmpty = 2;
+  addDiscoveryHealth(empty, prior);
+  assert.equal(empty.sources[0].consecutiveEmpty, 3);
+  assert.ok(empty.issues.some((s) => s.includes("3 consecutive empty")));
+});
+
+test("NBC remains disabled pending permission; no timezone is invented for its advertised feed", async () => {
+  const { DISCOVERY_FEED_SOURCES } = await import("../src/lib/beat/feed-sources.ts");
+  const s = DISCOVERY_FEED_SOURCES.find((s) => s.id === "nbcphilly");
+  assert.equal(s.enabled, false);
+  assert.match(s.disabledReason, /permission/i);
+  const r = await discoverFeedCandidates(
+    options({
+      sources: [s],
+      fetchImpl: () => {
+        throw new Error("must not fetch");
+      },
+    }),
+  );
+  assert.equal(r.report.sources[0].state, "disabled");
+  assert.equal(
+    parseDiscoveryFeed(
+      rss([
+        { ...article("no-zone", "Sixers sign veteran"), published: "Sat, Oct 17 2026 12:26:56 PM" },
+      ]),
+    )[0].published,
+    "",
+  );
+});
+
+test("major school and regional achievements receive the same significance as pro injuries", async () => {
+  const { discoveryPriority } = await import("../src/lib/beat/priority.ts");
+  const score = (text) =>
+    discoveryPriority(
+      { text, sourceTier: "broadcaster_publication", verifiedOfficial: false, timestamp: at(1) },
+      now,
+    );
+  const pro = score("Eagles quarterback sidelined with blood clot");
+  for (const text of [
+    "PIAA District 3 champion crowned",
+    "Gannon earns NCAA tournament berth",
+    "Lehigh wrestler named first-team All-American",
+    "Altoona Curve clinch championship",
+  ]) {
+    const p = score(text);
+    assert.equal(p.score, pro.score, text);
+    assert.ok(p.reasons.includes("Championship or competitive milestone"));
+  }
+  assert.ok(score("PIAA championship preview").score < pro.score);
+});
+
+test("declared oversized bodies are cancelled before reading", async () => {
+  let cancelled = false;
+  const body = new ReadableStream({
+    cancel() {
+      cancelled = true;
+    },
+  });
+  const r = await discoverFeedCandidates(
+    options({
+      sources: [source("oversize")],
+      fetchImpl: async () =>
+        new Response(body, { headers: { "content-length": String(FEED_MAX_BYTES + 1) } }),
+    }),
+  );
+  assert.equal(r.report.sources[0].state, "error");
+  assert.ok(cancelled);
+});

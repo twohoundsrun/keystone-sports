@@ -59,7 +59,7 @@ on Node 22. Both jobs must stay green.
   is used for the schema and migrations only, not the query runtime.
 - **Sports feeds** live in `src/lib/sports/` (ESPN + MLB StatsAPI + RSS, with a
   two-tier cache and per-source timeouts/retries).
-- **Feed discovery**: the desk defaults to retained RSS/Atom feeds, a cross-isolate ten-minute cooldown, and at most nine requests/ten pending inserts per run. Apply `0005_beat_discovery_state` before use. Last-run source/coverage evidence is owner-only; it does not prove a missing event. Legacy X remains explicit `mode: "legacy_x"`; scheduled Apify stays disabled.
+- **Feed discovery**: the desk defaults to retained RSS/Atom feeds, a cross-isolate ten-minute cooldown, and at most nine requests/ten pending inserts per run. Apply `0005_beat_discovery_state` before use. Inquirer and NBC editorial sources are disabled pending permission; seven sources remain enabled without increasing budgets. Last-run source/coverage evidence and repeated-attempt/volume diagnostics are owner-only; it does not prove a missing event. Legacy X remains explicit `mode: "legacy_x"`; scheduled Apify stays disabled.
 - **Beat** logic is in `src/lib/beat/` (ingest, mutate, ordering, flag) with the
   scheduled discovery/expire work in `workers/keystone-beat-jobs/`.
 

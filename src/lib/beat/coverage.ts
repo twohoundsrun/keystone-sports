@@ -15,6 +15,12 @@ export const PA_ENTITIES: { slug: string; area: CoverageArea; pattern: RegExp }[
   { slug: "penguins", area: "professional", pattern: /\b(?:pittsburgh penguins|penguins)\b/i },
   { slug: "flyers", area: "professional", pattern: /\bflyers\b/i },
   { slug: "union", area: "professional", pattern: /\bphiladelphia union\b/i },
+  {
+    slug: "riverhounds",
+    area: "professional",
+    pattern: /\b(?:Pittsburgh Riverhounds|Riverhounds)\b/i,
+  },
+  { slug: "philadelphia-wings", area: "professional", pattern: /\bPhiladelphia Wings\b/i },
   { slug: "penn-state", area: "college", pattern: /\b(?:penn state|nittany lions)\b/i },
   { slug: "pitt", area: "college", pattern: /\b(?:pitt(?:sburgh)? panthers|pitt)\b/i },
   ...[
@@ -52,6 +58,15 @@ export const PA_ENTITIES: { slug: string; area: CoverageArea; pattern: RegExp }[
   { slug: "ironpigs", area: "regional", pattern: /\b(?:ironpigs|lehigh valley ironpigs)\b/i },
   { slug: "seawolves", area: "regional", pattern: /\b(?:erie seawolves|seawolves)\b/i },
   { slug: "senators", area: "regional", pattern: /\bharrisburg senators\b/i },
+  { slug: "reading-fightin-phils", area: "regional", pattern: /\bReading Fightin(?:g)? Phils\b/i },
+  { slug: "altoona-curve", area: "regional", pattern: /\bAltoona Curve\b/i },
+  {
+    slug: "crosscutters",
+    area: "regional",
+    pattern: /\b(?:Williamsport Crosscutters|Crosscutters)\b/i,
+  },
+  { slug: "york-revolution", area: "regional", pattern: /\bYork Revolution\b/i },
+  { slug: "lancaster-barnstormers", area: "regional", pattern: /\bLancaster Barnstormers\b/i },
   { slug: "erie-otters", area: "regional", pattern: /\berie otters\b/i },
   { slug: "reading-royals", area: "regional", pattern: /\breading royals\b/i },
 ];
