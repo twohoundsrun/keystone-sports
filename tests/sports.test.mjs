@@ -465,3 +465,118 @@ test('ensureEspnHttps upgrades ESPN hosts only', () => {
   assert.equal(server.ensureEspnHttps('http://example.com/x'), 'http://example.com/x');
   assert.equal(server.ensureEspnHttps(undefined), undefined);
 });
+
+const flushMicrotasks = async () => { for (let i = 0; i < 30; i++) await Promise.resolve(); };
+function deadlineServer(fetch) {
+  return moduleFunctions('src/lib/sports/server.ts', ['getJson'], {
+    SportsCache, ...identity, ...time, ...teams, ...briefs, ...providers, fetch,
+  });
+}
+
+for (const stage of ['dns', 'body', 'retry']) {
+  test(`public feed deadline covers ${stage} without waiting for an abort-cooperative transport`, async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+    let calls = 0;
+    const fetch = async () => {
+      calls++;
+      if (stage === 'dns') return new Promise(() => {});
+      if (stage === 'body') return { ok: true, status: 200, json: () => new Promise(() => {}) };
+      return { ok: false, status: 503, body: { cancel: async () => {} } };
+    };
+    const task = deadlineServer(fetch).getJson('https://fixture.test/stall', 100)
+      .then(() => 'success', e => e.message);
+    await flushMicrotasks();
+    t.mock.timers.tick(100);
+    await flushMicrotasks();
+    const result = await Promise.race([task, Promise.resolve('still pending')]);
+    assert.match(result, /timed out/i);
+    t.mock.timers.tick(1000);
+    await flushMicrotasks();
+    assert.equal(calls, 1, 'expired request must not start another retry');
+  });
+}
+
+function homeLoader(deps) {
+  // Execute the actual route callback, excluding JSX/framework imports. This
+  // seam observes starts/results, not source spelling or a copied algorithm.
+  const source = readFileSync('src/routes/index.tsx', 'utf8');
+  const start = source.indexOf('  loader: async ');
+  const end = source.indexOf('\n  staleTime:', start);
+  assert.ok(start >= 0 && end > start);
+  const callback = source.slice(start + '  loader: '.length, end).trim().replace(/,$/, '');
+  const code = stripTypeScriptTypes(`const loader = ${callback};`, { mode: 'transform' });
+  return new Function(...Object.keys(deps), code + '\nreturn loader;')(...Object.values(deps));
+}
+
+test('homepage starts independent news and editorial reads before waiting for scores', async () => {
+  let resolveBoard;
+  const board = new Promise(resolve => { resolveBoard = resolve; });
+  const started = [];
+  const load = homeLoader({
+    getTodayBoard: () => { started.push('board'); return board; },
+    getNewsFeed: async () => { started.push('news'); return { articles: [] }; },
+    getBeatDesk: async () => { started.push('beat'); return { items: [] }; },
+    getPublishedPosts: async ({ data }) => { started.push(`posts:${data.date}`); return []; },
+  });
+  const task = load({ deps: { date: '2026-10-17' } });
+  try {
+    assert.deepEqual(started.sort(), ['beat', 'board', 'news']);
+  } finally {
+    resolveBoard({ date: '2026-10-17', games: [], warnings: ['ESPN unavailable'] });
+    const result = await task;
+    assert.equal(result.board.warnings[0], 'ESPN unavailable');
+    assert.ok(started.includes('posts:2026-10-17'));
+  }
+});
+
+test('public retry preserves valid data and retries a transient status within the same budget', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+  let calls = 0;
+  const task = deadlineServer(async () => ++calls === 1
+    ? { ok: false, status: 503, body: { cancel: async () => {} } }
+    : { ok: true, status: 200, json: async () => ({ score: '5-2', timestamp: 'original' }) })
+    .getJson('https://fixture.test/recover', 1000);
+  await flushMicrotasks(); t.mock.timers.tick(200); await flushMicrotasks();
+  assert.deepEqual(await task, { score: '5-2', timestamp: 'original' });
+  assert.equal(calls, 2);
+});
+
+test('nonretryable responses and malformed JSON do not generate additional requests', async () => {
+  for (const malformed of [false, true]) {
+    let calls = 0;
+    const server = deadlineServer(async () => {
+      calls++;
+      return malformed ? { ok: true, status: 200, json: async () => { throw new SyntaxError('bad JSON'); } }
+        : { ok: false, status: 404, body: { cancel: async () => {} } };
+    });
+    await assert.rejects(server.getJson('https://fixture.test/bad', 100));
+    assert.equal(calls, 1);
+  }
+});
+
+test('a response arriving after the deadline is cancelled without reading or retrying', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+  let resolveFetch, cancelled = false, read = false;
+  const task = deadlineServer(() => new Promise(resolve => { resolveFetch = resolve; }))
+    .getJson('https://fixture.test/late', 100).catch(e => e.message);
+  await flushMicrotasks(); t.mock.timers.tick(100); await flushMicrotasks();
+  assert.match(await task, /timed out/);
+  resolveFetch({ ok: true, status: 200, body: { cancel: async () => { cancelled = true; } }, json: async () => { read = true; return {}; } });
+  await flushMicrotasks(); assert.ok(cancelled); assert.equal(read, false);
+});
+
+test('homepage slow score and news windows overlap instead of accumulating 32 seconds', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+  let complete = false;
+  const load = homeLoader({
+    getTodayBoard: () => new Promise(resolve => setTimeout(() => resolve({ date: '2026-10-17', games: [], warnings: ['Delayed'] }), 20_000)),
+    getNewsFeed: () => new Promise(resolve => setTimeout(() => resolve({ articles: [] }), 12_000)),
+    getBeatDesk: async () => ({ items: [] }), getPublishedPosts: async () => [],
+  });
+  const task = load({ deps: {} }).then(result => { complete = true; return result; });
+  await flushMicrotasks(); t.mock.timers.tick(12_000); await flushMicrotasks();
+  assert.equal(complete, false);
+  t.mock.timers.tick(8_000); await flushMicrotasks();
+  assert.equal(complete, true);
+  assert.equal((await task).board.warnings[0], 'Delayed');
+});
