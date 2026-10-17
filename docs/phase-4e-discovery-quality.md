@@ -64,3 +64,22 @@ Run root tests/sports alias/typecheck/lint/production build, worker tests/typech
 No new migration, dependency, secret, binding, paid API, recurring AI call, cron change, request-frequency increase, deployment or publishing automation. Existing migration0005 must be present before discovery; reports enrich its JSON in place. At most **seven enabled requests** now; all other budgets remain unchanged. D1 statement count is unchanged. No extra calls are made to diagnose a failed source.
 
 The production release prerequisites in [Phase4D's runbook](phase-4d-release-readiness.md) still apply. Revalidate deployed Access/Worker egress and source licensing through authorized operator access. No production claims should be inferred from synthetic integration success. Public wire licensing and verified new high-school/college acquisition remain explicit limitations.
+
+### Executed validation
+
+- Root suite: **181 passed**, zero failures/skips, including **28 feed tests**. Sports alias repeats the same suite successfully (not additional unique tests).
+- Jobs worker: **37 passed**; worker and root type checks passed.
+- Lint: zero errors, existing unrelated unused `weekOddsBoards` warning only.
+- Production build passed and generated both Cloudflare `index.mjs` and OpenAI wrapper/hosting assets. Drizzle chain check passed; no SQL/schema/dependency/lockfile changes.
+- Isolated actual Wrangler D1 UUID `00000000-0000-0000-0000-00000000004e`: existing migrations applied locally; **14 workflow assertions** passed for access, priority pagination, manual approval/rejection and visibility, report persistence, failures and cooldown. Separate later runs inserted three deferred candidates, then zero repeats; two sources retained three-attempt failure streaks.
+- Chromium: **19 assertions** passed across owner/signed-out desk, health counts/current-score explanation, preview/filters, repeated failures and 320/390px layout, plus public `/` and `/news` without private diagnostics. The signed-out public-page checks used a local-only wrapper returning synthetic empty upstream responses. With actual workerd outbound networking, the original homepage navigation timed out while ESPN DNS failed; its server response eventually completed HTTP200 after about 32 seconds. Live public data and deployed behavior are not claimed passed. The local harness/configuration is outside the repository, with AI/Apify disabled and no production identifiers.
+
+### Standards
+
+Independent full-diff review found zero material documented-standard violations, correctness/security blockers or blocking refactoring concerns. The reviewer independently ran all 28 feed tests. Auth, PENDING-only writing, append-only migration history and existing budgets are intact.
+
+### Spec
+
+Independent full-diff review found zero code blockers. Explicit partial requirements: no new remote source activation or proof of wider live acquisition; production behavior remains unverified due unavailable authorization/network access. The fixture results establish recognition/classification improvement only.
+
+Review totals: Standards **0 open findings**; Spec **0 open code findings**, with the external acquisition/production limitations retained.
