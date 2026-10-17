@@ -130,3 +130,15 @@ umask 077
 9. **Recovery.** Stop discovery and separately authorize a return to the known prior Worker version if needed. Leave the additive table in place. Whole-D1 Time Travel/export restoration can overwrite later unrelated stories; it requires a controlled incident decision and verified backups, not an automatic rollback.
 
 No production migration, database write/export, deployment, source activation, discovery/dry-run, paid API, secret change or authenticated editorial action was performed. All local synthetic state/configuration is outside production, and no credential values are included in this report.
+
+## Independent review
+
+### Standards
+
+Zero blocking correctness/security or documented-standard findings. The reviewer independently ran all28 sports tests. The request helper, caches, auth, publishing rules and two build targets remain consistent with repository requirements. The20s optional-odds latency limitation remains explicit.
+
+### Spec
+
+Zero blocking specification violations. The fix is limited to reproduced reliability defects. Active traffic, live migration/binding, deployed Access and authorized discovery behavior remain unresolved operational release gates rather than claimed successes.
+
+Totals: Standards0 open findings; Spec0 open code findings. No production readiness clearance is implied by passing code review.
