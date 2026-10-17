@@ -43,7 +43,7 @@ The **merged repository registry**, not an authenticated live Worker configurati
 | PennLive PSU | application/xml | 50 / 50 |
 | Crossing Broad canonical `/feed/` | application/rss+xml | 60 / 60 |
 
-All seven supplied current dated material. This verifies read-only publisher responses/parser compatibility, not live Worker egress, quality of every headline or production ingestion. No real feed item was written to D1. Disabled Inquirer and NBC were not requested or activated; their existing permission/timestamp restrictions remain unchanged. Other public-wire integrations remain outside this fix and retain the licensing-review limitations in the Phase4E audit.
+All seven supplied current dated material. This verifies read-only publisher responses/parser compatibility, not live Worker egress, quality of every headline or production ingestion. No real feed item was written to D1. Disabled Inquirer and NBC were omitted from direct source-validation GETs and no editorial discovery was invoked for them; their existing permission/timestamp restrictions remain unchanged. The separate, unchanged public-wire loader still attempts its legacy feed registry, including these hosts, when public pages load. That pre-existing behavior remains outside this fix and retains the licensing-review limitations in the Phase4E audit.
 
 Code and local tests confirm:
 
