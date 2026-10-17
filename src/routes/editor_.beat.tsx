@@ -415,7 +415,17 @@ function BeatEditorPage() {
         <details className="mt-4 rounded-md bg-surface p-4 text-sm">
           <summary className="cursor-pointer font-semibold focus-visible:outline-2 focus-visible:outline-offset-2">Feed discovery report · {discoveryReport.candidates} candidates · {discoveryReport.issues.length} notices</summary>
           <p className="mt-2 text-muted">Checked {discoveryReport.checkedAt}. Observations from this manual run; missing candidates do not prove a missed event. Feed requests are limited to once every ten minutes across the desk, including dry-runs.</p>
-          <ul className="mt-2 space-y-1">{discoveryReport.sources.map((source) => <li key={source.id}>{source.label}: {source.state}; {source.observed} observed, {source.eligible} eligible{source.error ? ` (${source.error})` : ""}</li>)}</ul>
+          <p className="mt-2">{discoveryReport.candidates} selected · {discoveryReport.inserted ?? "not recorded"} inserted · {discoveryReport.skippedDuplicates} duplicates skipped · {discoveryReport.discarded ?? "not recorded"} relevance discards · {discoveryReport.deferred} deferred. Volume: {(discoveryReport.volume ?? "not recorded").replaceAll("_", " ")}{discoveryReport.dryRun ? " (dry run; no cards inserted)" : ""}.</p>
+          <ul className="mt-2 space-y-1">{discoveryReport.sources.map((source) => <li key={source.id}>
+            {source.label}: {source.state}; {source.observed} usable, {source.eligible} eligible
+            {source.entries != null ? `; ${source.entries} feed entries, ${source.ignored ?? 0} unusable metadata` : ""}
+            {source.httpStatus ? `; HTTP ${source.httpStatus}` : ""}{source.contentType ? ` (${source.contentType})` : ""}
+            {source.error ? ` — ${source.error}` : ""}
+            {source.consecutiveFailures ? `; ${source.consecutiveFailures} consecutive failed attempts` : ""}
+            {source.consecutiveEmpty ? `; ${source.consecutiveEmpty} consecutive empty reads` : ""}
+            {source.retryAfter ? `; retry after ${source.retryAfter}` : ""}
+            {source.lastSuccessAt ? `; last valid feed read ${source.lastSuccessAt}` : ""}
+          </li>)}</ul>
           <ul className="mt-2 space-y-1">{discoveryReport.coverage.map((coverage) => <li key={coverage.area}>{coverage.area.replaceAll("_", " ")}: {coverage.eligible} eligible, {coverage.candidates} candidates ({coverage.state.replaceAll("_", " ")})</li>)}</ul>
           {discoveryReport.issues.length ? <ul className="mt-2 text-warn">{discoveryReport.issues.map((issue, index) => <li key={index}>{issue}</li>)}</ul> : null}
           {discoveryReport.updates.length ? (
@@ -462,9 +472,11 @@ function BeatEditorPage() {
                       </div>
                       <p className="mt-2 break-words font-display text-xl tracking-wide">{item.headline}</p>
                       {item.approvalStatus === "pending" && item.priorityReasons?.length ? (
-                        <p className="mt-1 text-xs text-muted">
-                          Priority signals: {item.priorityReasons.join("; ")}.
-                        </p>
+                        <details className="mt-2 text-xs text-muted">
+                          <summary className="cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2">Current relevance signals</summary>
+                          <p className="mt-1">Queue score {item.relevanceScore ?? "unavailable"} was stored at intake. These signals use the current model and age; they do not rescore or approve this story.</p>
+                          <p className="mt-1">{item.priorityReasons.join("; ")}.</p>
+                        </details>
                       ) : null}
                       {item.approvalStatus === "pending" && item.relatedStoryUrl ? (
                         <a

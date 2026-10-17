@@ -1,0 +1,95 @@
+{
+  "now": "2026-10-17T12:00:00.000Z",
+  "cases": [
+    {
+      "id": "district",
+      "title": "PIAA District 3 champion crowned after final",
+      "admit": true
+    },
+    {
+      "id": "ncaa",
+      "title": "Gannon earns NCAA tournament berth",
+      "admit": true
+    },
+    {
+      "id": "honor",
+      "title": "Lehigh wrestler named first-team All-American",
+      "admit": true
+    },
+    {
+      "id": "regional",
+      "title": "Reading Fightin Phils clinch playoff berth",
+      "admit": true
+    },
+    {
+      "id": "riverhounds",
+      "title": "Pittsburgh Riverhounds clinch playoff berth",
+      "admit": true
+    },
+    {
+      "id": "coach",
+      "title": "Philadelphia Wings name new head coach",
+      "admit": true
+    },
+    {
+      "id": "medical",
+      "title": "Eagles quarterback sidelined with blood clot",
+      "admit": true
+    },
+    {
+      "id": "clearance",
+      "title": "Eagles quarterback medically cleared after blood clot",
+      "admit": true
+    },
+    {
+      "id": "preview",
+      "title": "PIAA championship preview: players to watch",
+      "admit": false
+    },
+    {
+      "id": "signup",
+      "title": "Bucknell season-ticket sign up opens today",
+      "admit": false
+    },
+    {
+      "id": "promo",
+      "title": "Penn State giveaway: win tickets",
+      "admit": false
+    },
+    {
+      "id": "boston",
+      "title": "Boston College Eagles win national tournament",
+      "admit": false
+    },
+    {
+      "id": "seton",
+      "title": "Seton Hall Pirates hire head coach",
+      "admit": false
+    },
+    {
+      "id": "duquesne",
+      "title": "Duquesne signs new head coach",
+      "admit": true
+    },
+    {
+      "id": "union",
+      "title": "Philadelphia Union signs striker",
+      "admit": true
+    },
+    {
+      "id": "penguins",
+      "title": "Pittsburgh Penguins forward ruled out",
+      "admit": true
+    },
+    {
+      "id": "gallery",
+      "title": "Villanova photo gallery from team media day",
+      "admit": false
+    },
+    {
+      "id": "curve",
+      "title": "Altoona Curve clinch championship",
+      "admit": true
+    }
+  ]
+}

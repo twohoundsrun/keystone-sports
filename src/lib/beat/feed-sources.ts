@@ -30,9 +30,11 @@ export const DISCOVERY_FEED_SOURCES: DiscoveryFeedSource[] = BEAT_FEEDS.map((fee
   area: feed.teamSlug === "penn-state" ? "college" : feed.teamSlug ? "professional" : undefined,
   verification: "retained",
   // Feed-linked terms prohibit automated collection without prior written consent.
-  enabled: feed.id !== "inquirer",
+  enabled: !["inquirer", "nbcphilly"].includes(feed.id),
   disabledReason:
     feed.id === "inquirer"
       ? "Publisher permission required for automated collection; disabled pending review"
-      : undefined,
+      : feed.id === "nbcphilly"
+        ? "Publisher permission required; advertised alternate feed also lacks publication timezones"
+        : undefined,
 }));

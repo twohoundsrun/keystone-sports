@@ -35,19 +35,20 @@ const PA_TEAMS = new Set([
   "erie-otters",
 ]);
 const PA_HINT =
-  /\b(pennsylvania|philly|philadelphia|pittsburgh|penn state|pitt|temple|villanova|drexel|duquesne|lehigh|lafayette|bucknell|kutztown|slippery rock|harrisburg|scranton|erie|altoona|lancaster|allentown|reading (?:royals|fightin phils)|williamsport|piaa|wpial|psac|eagles|steelers|phillies|pirates|sixers|flyers|penguins|philadelphia union)\b/i;
+  /\b(pennsylvania|philly|philadelphia|pittsburgh|penn state|pitt|temple|villanova|drexel|duquesne|lehigh|lafayette|bucknell|kutztown|slippery rock|harrisburg|scranton|erie|altoona|lancaster|allentown|reading (?:royals|fightin phils)|williamsport|piaa|wpial|psac|steelers|phillies|sixers|philadelphia union)\b/i;
 const DEVELOPMENT =
-  /\b(ruled out|injur(?:y|ed)|concussion|surgery|suspend(?:s|ed)?|sign(?:s|ed)?|trade[ds]?|acquir(?:e|es|ed)|waive[ds]?|fire[ds]?|hire[ds]?|steps down|resigns?|departure|investigation|violations|clear(?:s|ed)?|returns? to practice|activate[ds]?)\b/i;
+  /\b(ruled out|injur(?:y|ed)|concussion|surgery|suspend(?:s|ed)?|sign(?:s|ed)?|trade[ds]?|acquir(?:e|es|ed)|waive[ds]?|fire[ds]?|hire[ds]?|steps down|resigns?|departure|investigation|violations|clear(?:s|ed)?|returns? to practice|activate[ds]?|sidelined|blood clot|names? (?:a |their |its )?(?:new )?(?:head )?coach)\b/i;
 const MILESTONE =
-  /\b(championship|champions|state title|playoff berth|clinches?|qualif(?:y|ies|ied)|record[- ]breaking|national tournament|NCAA (?:bid|berth)|advances? to)\b/i;
+  /\b(championship|champions?|state title|playoff berth|clinches?|qualif(?:y|ies|ied)|record[- ]breaking|national tournament|NCAA (?:tournament )?(?:bid|berth)|advances? to|(?:named|earns?|selected).{0,50}All[- ]Americans?)\b/i;
 const RESULT = /\b(wins?|beats?|defeats?|overtime|final score)\b/i;
 const PREVIEW = /\b(preview|power rankings?|mock draft|predictions?|things to watch)\b/i;
 const PROMO =
-  /\b(giveaway|sweepstakes|promo code|merchandise|win tickets?|jersey giveaway|parlay|betting|sponsored)\b/i;
+  /\b(giveaway|sweepstakes|promo code|merchandise|win tickets?|jersey giveaway|parlay|betting|sponsored|sign up|register now|tickets? on sale)\b/i;
 const RUMOR = /\b(rumou?r|sources say|hearing|reportedly|per sources|could be)\b/i;
 
 /** Intake significance gate shares the existing relevance model's signals. */
 export function hasEditorialDevelopment(text: string): boolean {
+  if (PREVIEW.test(text) && !DEVELOPMENT.test(text)) return false;
   return DEVELOPMENT.test(text) || MILESTONE.test(text) || RESULT.test(text);
 }
 
@@ -98,7 +99,7 @@ export function discoveryPriority(
     reasons.push("Game result");
   }
   if (PREVIEW.test(input.text)) {
-    score -= 12;
+    score -= 30;
     reasons.push("Preview or opinion");
   }
   const timestamp = Date.parse(input.timestamp ?? "");

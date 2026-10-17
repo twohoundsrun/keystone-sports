@@ -1,5 +1,5 @@
 import { DISCOVERY_FEED_SOURCES, type DiscoveryFeedSource } from "./feed-sources";
-import { parseDiscoveryFeed } from "./feed-parser";
+import { parseDiscoveryFeedResult } from "./feed-parser";
 import { COVERAGE_AREAS, inferPaCoverage, type CoverageArea } from "./coverage";
 import { hasEditorialDevelopment } from "./priority";
 import {
@@ -20,6 +20,13 @@ export type SourceObservation = {
   label: string;
   state: "ok" | "empty" | "stale" | "error" | "disabled" | "backoff";
   observed: number;
+  entries?: number;
+  ignored?: number;
+  httpStatus?: number;
+  contentType?: string;
+  consecutiveFailures?: number;
+  consecutiveEmpty?: number;
+  lastSuccessAt?: string;
   eligible: number;
   newestPublished: string | null;
   retryAfter?: string;
@@ -31,6 +38,10 @@ export type FeedDiscoveryReport = {
   sources: SourceObservation[];
   candidates: number;
   deferred: number;
+  discarded?: number;
+  inserted?: number;
+  dryRun?: boolean;
+  volume?: "first_run" | "not_comparable" | "normal" | "increased" | "decreased";
   skippedDuplicates: number;
   coverage: {
     area: CoverageArea;
@@ -43,8 +54,10 @@ export type FeedDiscoveryReport = {
 };
 
 async function readBounded(response: Response): Promise<string> {
-  if (Number(response.headers.get("content-length")) > FEED_MAX_BYTES)
+  if (Number(response.headers.get("content-length")) > FEED_MAX_BYTES) {
+    await response.body?.cancel();
     throw new Error("Feed exceeds size limit");
+  }
   const reader = response.body?.getReader();
   if (!reader) throw new Error("Empty response body");
   const decoder = new TextDecoder("utf-8", { fatal: true });
@@ -119,6 +132,8 @@ export async function discoverFeedCandidates(
             "User-Agent": "KeystoneBeatDiscovery/1.0 (+https://keystonebeat.com)",
           },
         });
+        observation.httpStatus = response.status;
+        observation.contentType = (response.headers.get("content-type") ?? "").slice(0, 120);
         if (!response.ok) {
           const retry = response.headers.get("retry-after");
           if (retry) {
@@ -135,7 +150,11 @@ export async function discoverFeedCandidates(
           await response.body?.cancel();
           throw new Error("Unexpected feed content type");
         }
-        const articles = parseDiscoveryFeed(await readBounded(response));
+        const parsed = parseDiscoveryFeedResult(await readBounded(response));
+        const articles = parsed.articles;
+        observation.entries = parsed.entries;
+        observation.ignored = parsed.ignored;
+        if (parsed.entries && !articles.length) throw new Error("No usable article metadata");
         observation.observed = articles.length;
         for (const article of [...articles].sort(
           (a, b) => (Date.parse(b.published) || 0) - (Date.parse(a.published) || 0),
@@ -245,6 +264,7 @@ export async function discoverFeedCandidates(
     sources: observations.sort((a, b) => a.id.localeCompare(b.id)),
     candidates: normalized.candidates.length,
     deferred,
+    discarded: normalized.discarded,
     skippedDuplicates: normalized.skippedDuplicates,
     issues,
     updates,

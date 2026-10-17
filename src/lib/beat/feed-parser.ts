@@ -48,7 +48,11 @@ function record(value: unknown): Record<string, unknown> {
 }
 
 /** Feed metadata only. Never import article bodies, embedded HTML or external entities. */
-export function parseDiscoveryFeed(xml: string): FeedArticle[] {
+export function parseDiscoveryFeedResult(xml: string): {
+  articles: FeedArticle[];
+  entries: number;
+  ignored: number;
+} {
   if (/<!DOCTYPE|<!ENTITY/i.test(xml) || XMLValidator.validate(xml) !== true)
     throw new Error("Malformed or unsupported XML");
   const root = parser.parse(xml) as Record<string, unknown>;
@@ -56,37 +60,42 @@ export function parseDiscoveryFeed(xml: string): FeedArticle[] {
   const rss = record(record(root.rss).channel);
   const atom = record(root.feed);
   if (!root.rss && !root.feed) throw new Error("Response is not RSS or Atom");
-  return list(root.rss ? rss.item : atom.entry)
-    .slice(0, 100)
-    .flatMap((value) => {
-      const item = record(value);
-      const title = text(item.title);
-      const atomLink = list(item.link)
-        .map(record)
-        .find((link) => !link["@rel"] || link["@rel"] === "alternate");
-      const href = root.rss ? text(item.link) : text(atomLink?.["@href"]);
-      try {
-        const url = new URL(href);
-        if (
-          url.protocol !== "https:" ||
-          url.username ||
-          url.password ||
-          !title ||
-          title.length > 1000 ||
-          url.toString().length > 2048
-        )
-          return [];
-        url.hash = "";
-        return [
-          {
-            title,
-            href: url.toString(),
-            published: iso(item.pubDate ?? item.published ?? item.date),
-            updated: iso(item.updated ?? item.modified) || undefined,
-          },
-        ];
-      } catch {
+  const entries = list(root.rss ? rss.item : atom.entry).slice(0, 100);
+  const articles: FeedArticle[] = entries.flatMap((value) => {
+    const item = record(value);
+    const title = text(item.title);
+    const atomLink = list(item.link)
+      .map(record)
+      .find((link) => !link["@rel"] || link["@rel"] === "alternate");
+    const href = root.rss ? text(item.link) : text(atomLink?.["@href"]);
+    try {
+      const url = new URL(href);
+      if (
+        url.protocol !== "https:" ||
+        url.username ||
+        url.password ||
+        !title ||
+        title.length > 1000 ||
+        url.toString().length > 2048
+      )
         return [];
-      }
-    });
+      url.hash = "";
+      return [
+        {
+          title,
+          href: url.toString(),
+          published: iso(item.pubDate ?? item.published ?? item.date),
+          updated: iso(item.updated ?? item.modified) || undefined,
+        },
+      ];
+    } catch {
+      return [];
+    }
+  });
+  return { articles, entries: entries.length, ignored: entries.length - articles.length };
+}
+
+/** Compatible metadata-only API for existing callers. */
+export function parseDiscoveryFeed(xml: string): FeedArticle[] {
+  return parseDiscoveryFeedResult(xml).articles;
 }
